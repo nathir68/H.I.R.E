@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>H.I.R.E. Ecosystem</title>
+    <style>
+        body { background: radial-gradient(circle at center, #1a2a44, #050a14); color: white; font-family: 'Poppins', sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; text-align: center; overflow: hidden; }
+        .hero { animation: fadeIn 1.5s ease-in-out; }
+        h1 { font-size: 5rem; margin: 0; letter-spacing: 5px; background: linear-gradient(45deg, #00c6ff, #0072ff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-shadow: 0px 10px 30px rgba(0, 198, 255, 0.3); }
+        h3 { color: #a1a6b4; font-weight: 400; font-size: 1.5rem; margin-top: 10px; max-width: 600px; line-height: 1.5; }
+        .highlight { color: #00ff88; font-weight: bold; }
+        .btn { background: linear-gradient(45deg, #00c6ff, #0072ff); border: none; padding: 15px 40px; border-radius: 30px; color: white; font-size: 1.2rem; font-weight: bold; cursor: pointer; margin-top: 30px; transition: 0.3s; text-decoration: none; display: inline-block; box-shadow: 0 10px 20px rgba(0, 114, 255, 0.3); }
+        .btn:hover { box-shadow: 0 15px 30px rgba(0, 198, 255, 0.6); transform: translateY(-3px); }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+    <div class="hero">
+        <h1>H.I.R.E.</h1>
+        <h3><span class="highlight">H</span>iring & <span class="highlight">I</span>ntegrated <span class="highlight">R</span>ecruitment <span class="highlight">E</span>cosystem</h3>
+        <p style="color: rgba(255,255,255,0.5); font-size: 1rem; margin-top: 20px;">Connecting Job Seekers and HRs through the power of Artificial Intelligence.</p>
+        <a href="/auth" class="btn">Enter Ecosystem 🚀</a>
+    </div>
+</body>
+</html>

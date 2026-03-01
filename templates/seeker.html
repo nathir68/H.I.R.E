@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>H.I.R.E. - Seeker Portal</title>
+    <style>
+        body { background: #0b1426; color: white; font-family: 'Poppins', sans-serif; display: flex; flex-direction: column; align-items: center; padding: 40px; margin: 0; }
+        .glass { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); padding: 40px; border-radius: 20px; width: 70%; border: 1px solid rgba(255, 255, 255, 0.1); box-sizing: border-box; }
+        .top-nav { display: flex; justify-content: space-between; width: 70%; margin-bottom: 20px; align-items: center; }
+        .top-nav a, .top-nav button { color: #a1a6b4; text-decoration: none; font-weight: bold; background: none; border: none; cursor: pointer; font-size: 15px; }
+        .top-nav a:hover, .top-nav button:hover { color: #ff4b4b; }
+        .brand { font-size: 32px; font-weight: bold; background: linear-gradient(45deg, #00c6ff, #0072ff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .job-card { background: rgba(255,255,255,0.08); padding: 15px; border-radius: 10px; margin-top: 15px; border-left: 4px solid #00c6ff; min-width: 200px; }
+        .up-btn { background: linear-gradient(45deg, #00c6ff, #0072ff); padding: 12px 25px; border-radius: 30px; cursor: pointer; font-weight: bold; display: inline-block; margin-top: 15px; border: none; color: white; transition: 0.3s; }
+        .up-btn:hover { transform: scale(1.02); box-shadow: 0 0 15px #00c6ff; }
+    </style>
+</head>
+<body onload="loadJobs()">
+    <div class="top-nav">
+        <div style="display: flex; gap: 20px;"><a href="/logout">← Logout</a><button onclick="delAccount()">🗑️ Delete Account</button></div>
+        <div class="brand">H.I.R.E.</div>
+    </div>
+    <div class="glass">
+        <h1>Welcome Seeker! 🎓</h1>
+        <div style="margin-bottom: 30px; text-align: left;">
+            <h3 style="color: #00ff88;">🔥 Live Openings in Ecosystem</h3>
+            <div id="liveJobs" style="display: flex; gap: 15px; overflow-x: auto; padding-bottom: 15px;"></div>
+        </div>
+        <hr style="border: 0.5px solid rgba(255,255,255,0.1);">
+        <h3>Smart AI Matcher</h3>
+        <p style="color: #a1a6b4; font-size: 14px;">Upload your resume. If you match >40% with a live opening, your resume will be automatically routed to the HR.</p>
+        <label for="f" class="up-btn">📂 Choose Resume (PDF)</label>
+        <input type="file" id="f" accept=".pdf" style="display:none;" onchange="document.getElementById('fn').innerText = 'Selected: ' + this.files[0].name">
+        <p id="fn" style="color: #00ff88; font-size: 13px; font-weight: bold; margin-top: 10px;"></p>
+        <button class="up-btn" style="background:#ff4b4b;" onclick="getRecs()">Analyze Skills & Apply</button>
+    </div>
+    <div id="recs" style="width: 70%;"></div>
+    <script>
+        async function loadJobs() {
+            const r = await fetch('/get_public_jobs'); const jobs = await r.json(); const b = document.getElementById('liveJobs');
+            b.innerHTML = jobs.length === 0 ? "<p style='color:#a1a6b4;'>No active openings found at the moment.</p>" : "";
+            jobs.forEach(j => { b.innerHTML += `<div class="job-card"><b style="color:#00c6ff;">${j.title}</b><br><small>${j.company}</small></div>`; });
+        }
+        async function getRecs() {
+            const fileInput = document.getElementById('f'); if(fileInput.files.length === 0) return alert("Please select a PDF resume first!");
+            const fd = new FormData(); fd.append('resume', fileInput.files[0]); const l = document.getElementById('recs'); 
+            l.innerHTML = "<h3 style='margin-top:20px; color:#00c6ff; text-align:center;'>Analyzing inside the Ecosystem...</h3>";
+            const r = await fetch('/recommend', { method: 'POST', body: fd }); const d = await r.json();
+            l.innerHTML = "<h2 style='margin-top:20px;'>Match Results:</h2>"; if(d.length === 0) l.innerHTML += "<p>No jobs found to match against.</p>";
+            d.forEach(x => { l.innerHTML += `<div class="job-card" style="display:flex; justify-content:space-between; align-items:center;"><span><b style="font-size:18px;">${x.title}</b><br><small style="color:#a1a6b4;">${x.company}</small></span><b style="color:#00ff88; font-size:18px;">${x.score} Match</b></div>`; });
+        }
+        async function delAccount() { if(confirm("⚠️ Warning: Delete your account permanently?")) { await fetch('/delete_account', { method: 'POST' }); window.location.href = '/'; } }
+    </script>
+</body>
+</html>

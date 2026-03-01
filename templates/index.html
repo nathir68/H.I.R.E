@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>H.I.R.E. - Auth</title>
+    <style>
+        body { background: radial-gradient(circle, #1a2a44, #0b1426); color: white; font-family: 'Poppins', sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+        .card { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(15px); padding: 40px; border-radius: 20px; text-align: center; border: 1px solid rgba(255,255,255,0.1); width: 380px; box-shadow: 0 15px 35px rgba(0,0,0,0.5); }
+        .brand-title { font-size: 2rem; margin-bottom: 5px; background: linear-gradient(45deg, #00c6ff, #0072ff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: bold; }
+        input, select { background: rgba(255,255,255,0.1); border: 1px solid #334155; padding: 12px; color: white !important; border-radius: 8px; margin-bottom: 12px; width: 100%; box-sizing: border-box; }
+        select option { background: #111b2e; color: white; }
+        .btn { background: linear-gradient(45deg, #00c6ff, #0072ff); border: none; padding: 12px; width: 100%; border-radius: 8px; color: white; font-weight: bold; cursor: pointer; margin-top: 10px; transition: 0.3s; }
+        .btn:hover { box-shadow: 0 0 15px #00c6ff; transform: scale(1.02); }
+        .tab-btn { background: none; border: none; color: #a1a6b4; cursor: pointer; padding: 10px; font-weight: bold; }
+        .active { color: #00c6ff; border-bottom: 2px solid #00c6ff; }
+    </style>
+</head>
+<body onload="document.getElementById('lf').reset(); document.getElementById('rf').reset();">
+    <div class="card">
+        <div class="brand-title">H.I.R.E.</div>
+        <p style="color: #a1a6b4; font-size: 12px; margin-top: 0; margin-bottom: 20px;">Secure Access Portal</p>
+        <div id="tabs">
+            <button id="lbtn" class="tab-btn active" onclick="sh('l')">Login</button>
+            <button id="rbtn" class="tab-btn" onclick="sh('r')">Register</button>
+        </div>
+        <form id="lf" autocomplete="off">
+            <input type="email" id="le" placeholder="Email Address" autocomplete="off">
+            <input type="password" id="lp" placeholder="Password" autocomplete="new-password">
+            <button type="button" class="btn" onclick="login()">Access Dashboard</button>
+        </form>
+        <form id="rf" style="display:none;" autocomplete="off">
+            <input type="text" id="rn" placeholder="Full Name" autocomplete="off">
+            <input type="email" id="re" placeholder="Email Address" autocomplete="off">
+            <select id="rr">
+                <option value="" disabled selected>Select Your Role</option>
+                <option value="Seeker">Job Seeker 🎓</option>
+                <option value="HR">Recruiter 🏢</option>
+            </select>
+            <input type="password" id="rp" placeholder="Create Password" autocomplete="new-password">
+            <button type="button" class="btn" style="background:#ff4b4b;" onclick="reg()">Join H.I.R.E.</button>
+        </form>
+    </div>
+    <script>
+        function sh(t){ 
+            document.getElementById('lf').style.display = t=='l'?'block':'none'; 
+            document.getElementById('rf').style.display = t=='r'?'block':'none';
+            document.getElementById('lbtn').className = t=='l'?'tab-btn active':'tab-btn';
+            document.getElementById('rbtn').className = t=='r'?'tab-btn active':'tab-btn';
+            document.getElementById('lf').reset(); document.getElementById('rf').reset();
+        }
+        async function reg(){
+            const d = {name:document.getElementById('rn').value, email:document.getElementById('re').value, role:document.getElementById('rr').value, pass:document.getElementById('rp').value};
+            if(!d.role) { alert("Please select a role!"); return; }
+            const r = await fetch('/register', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(d)});
+            const res = await r.json(); alert(res.status); if(res.status=='Success') sh('l');
+        }
+        async function login(){
+            const d = {email:document.getElementById('le').value, pass:document.getElementById('lp').value};
+            const r = await fetch('/login', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(d)});
+            const res = await r.json(); 
+            if(res.status === 'ok') {
+                if(res.role=='HR') location.href='/recruiter_page'; else location.href='/seeker_page';
+            } else { alert('Invalid Credentials!'); }
+        }
+    </script>
+</body>
+</html>
