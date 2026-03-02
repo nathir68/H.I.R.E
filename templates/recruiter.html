@@ -8,7 +8,8 @@
         .main { flex: 1; padding: 40px; overflow-y: auto; }
         .glass { background: rgba(255, 255, 255, 0.05); padding: 25px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); margin-bottom: 25px; }
         input, textarea { width: 100%; background: rgba(255, 255, 255, 0.1); border: 1px solid #334155; padding: 12px; color: white; border-radius: 8px; margin-bottom: 12px; box-sizing: border-box; }
-        .btn { background: linear-gradient(45deg, #00c6ff, #0072ff); border: none; padding: 12px; border-radius: 8px; color: white; font-weight: bold; cursor: pointer; width: 100%; }
+        .btn { background: linear-gradient(45deg, #00c6ff, #0072ff); border: none; padding: 12px; border-radius: 8px; color: white; font-weight: bold; cursor: pointer; width: 100%; transition: 0.3s; }
+        .btn:hover { box-shadow: 0 0 15px #00c6ff; }
         .job-card { background: rgba(255,255,255,0.08); padding: 15px; border-radius: 10px; margin-bottom: 15px; border-left: 5px solid #00c6ff; display: flex; justify-content: space-between; align-items: center; }
         .action-btns button { border: none; padding: 6px 12px; border-radius: 5px; cursor: pointer; font-size: 11px; font-weight: bold; margin-left: 5px; }
         .top-nav { display: flex; justify-content: space-between; margin-bottom: 20px; }
@@ -45,74 +46,35 @@
         </div>
         <h3>Ranking Results</h3>
         <table>
-            <thead><tr style="border-bottom: 2px solid #334155;"><th align="left">Rank</th><th align="left">Candidate File</th><th align="left">AI Score</th><th align="left">Decision</th></tr></thead>
+            <thead><tr style="border-bottom: 2px solid #334155;"><th align="left">Candidate File</th><th align="left">AI Score</th><th align="left">Decision</th></tr></thead>
             <tbody id="rb"></tbody>
         </table>
     </div>
     <script>
         let currentJobs = []; 
-
         async function loadMyJobs() {
-            const r = await fetch('/get_my_jobs'); 
-            currentJobs = await r.json(); 
-            const container = document.getElementById('jobContainer'); 
-            container.innerHTML = "";
+            const r = await fetch('/get_my_jobs'); currentJobs = await r.json(); const container = document.getElementById('jobContainer'); container.innerHTML = "";
             currentJobs.forEach(j => { 
-                container.innerHTML += `
-                <div class="job-card">
-                    <div><b>${j.title}</b><br><small>${j.company}</small></div>
-                    <div class="action-btns">
-                        <button style="background:#ffcc00; color:black;" onclick="editJ(${j.id})">Edit</button>
-                        <button style="background:#ff4b4b; color:white;" onclick="deleteJ(${j.id})">Del</button>
-                    </div>
-                </div>`; 
+                container.innerHTML += `<div class="job-card"><div><b>${j.title}</b><br><small style="color:#00ff88;">Subject ID: JOB-${j.id}</small></div>
+                <div class="action-btns"><button style="background:#ff4b4b; color:white;" onclick="deleteJ(${j.id})">Del</button></div></div>`; 
             });
         }
-
         async function postJob() {
             const d = {title:document.getElementById('jt').value, company:document.getElementById('jc').value, skills:document.getElementById('js').value};
             if(!d.title || !d.skills) return alert("Title and Skills are required!");
             await fetch('/post_job', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(d)});
             loadMyJobs(); document.getElementById('jt').value=''; document.getElementById('jc').value=''; document.getElementById('js').value='';
         }
-
-        async function deleteJ(id) { 
-            if(confirm("Delete this vacancy permanently?")) { 
-                await fetch(`/delete_job/${id}`, { method: 'POST' }); 
-                loadMyJobs(); 
-            } 
-        }
-
-        function editJ(id) {
-            const job = currentJobs.find(j => j.id === id);
-            if(!job) return;
-            const nt = prompt("Update Title:", job.title); if (nt === null) return; 
-            const nc = prompt("Update Company:", job.company); if (nc === null) return;
-            const ns = prompt("Update Skills:", job.skills); if (ns === null) return;
-            if (nt.trim() === '' || ns.trim() === '') return alert("Fields cannot be empty!");
-
-            fetch(`/update_job/${id}`, { 
-                method: 'POST', headers: { 'Content-Type': 'application/json' }, 
-                body: JSON.stringify({ title: nt, company: nc, skills: ns }) 
-            }).then(() => loadMyJobs()); 
-        }
-
+        async function deleteJ(id) { if(confirm("Delete this vacancy?")) { await fetch(`/delete_job/${id}`, { method: 'POST' }); loadMyJobs(); } }
         async function startRanking() {
             const fd = new FormData(); fd.append('role', document.getElementById('rl').value); fd.append('jd', document.getElementById('jd').value);
             const files = document.getElementById('multi').files; if(files.length === 0) return alert("Please select resumes!");
             for(let f of files) fd.append('resumes', f); 
-            document.getElementById('rb').innerHTML = "<tr><td colspan='4' style='text-align:center; color:#00c6ff;'>Analyzing resumes... Please wait.</td></tr>";
-            
-            const r = await fetch('/rank', { method: 'POST', body: fd }); const d = await r.json(); 
-            const b = document.getElementById('rb'); b.innerHTML = "";
-            d.forEach(x => { b.innerHTML += `<tr><td>#${x.rank}</td><td>${x.name}</td><td><b>${x.score}</b></td><td style="color:${x.status.includes('Shortlisted') ? '#00ff88' : '#ff4b4b'}">${x.status}</td></tr>`; });
+            document.getElementById('rb').innerHTML = "<tr><td colspan='3' style='text-align:center; color:#00c6ff;'>Analyzing resumes... Please wait.</td></tr>";
+            const r = await fetch('/rank', { method: 'POST', body: fd }); const d = await r.json(); const b = document.getElementById('rb'); b.innerHTML = "";
+            d.forEach(x => { b.innerHTML += `<tr><td>${x.name}</td><td><b>${x.score}</b></td><td style="color:${x.status.includes('Fake') || x.status.includes('Rejected') ? '#ff4b4b' : '#00ff88'}">${x.status}</td></tr>`; });
         }
-
-        async function delAccount() { 
-            if(confirm("⚠️ Warning: Delete your account and all your posted jobs permanently?")) { 
-                await fetch('/delete_account', { method: 'POST' }); window.location.href = '/'; 
-            } 
-        }
+        async function delAccount() { if(confirm("⚠️ Warning: Delete your account and all jobs permanently?")) { await fetch('/delete_account', { method: 'POST' }); window.location.href = '/'; } }
     </script>
 </body>
 </html>

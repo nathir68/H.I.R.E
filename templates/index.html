@@ -1,66 +1,279 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>H.I.R.E. - Auth</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>H.I.R.E. | Authentication</title>
     <style>
-        body { background: radial-gradient(circle, #1a2a44, #0b1426); color: white; font-family: 'Poppins', sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
-        .card { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(15px); padding: 40px; border-radius: 20px; text-align: center; border: 1px solid rgba(255,255,255,0.1); width: 380px; box-shadow: 0 15px 35px rgba(0,0,0,0.5); }
-        .brand-title { font-size: 2rem; margin-bottom: 5px; background: linear-gradient(45deg, #00c6ff, #0072ff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: bold; }
-        input, select { background: rgba(255,255,255,0.1); border: 1px solid #334155; padding: 12px; color: white !important; border-radius: 8px; margin-bottom: 12px; width: 100%; box-sizing: border-box; }
-        select option { background: #111b2e; color: white; }
-        .btn { background: linear-gradient(45deg, #00c6ff, #0072ff); border: none; padding: 12px; width: 100%; border-radius: 8px; color: white; font-weight: bold; cursor: pointer; margin-top: 10px; transition: 0.3s; }
-        .btn:hover { box-shadow: 0 0 15px #00c6ff; transform: scale(1.02); }
-        .tab-btn { background: none; border: none; color: #a1a6b4; cursor: pointer; padding: 10px; font-weight: bold; }
-        .active { color: #00c6ff; border-bottom: 2px solid #00c6ff; }
+        /* 🌌 PERFECT MATCH: Deep Navy Dashboard Background */
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #0b1121; /* Matches your Admin/HR dashboards */
+            background-image: radial-gradient(circle at top right, #111a30, #080d1a);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #fff;
+        }
+
+        /* 🔮 The Glass Panel */
+        .auth-container {
+            background: #131c31; /* Sleek dark card */
+            border: 1px solid #1f2d4a;
+            border-radius: 12px;
+            padding: 40px;
+            width: 400px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            text-align: center;
+        }
+
+        /* H.I.R.E. Text matching the Front Page Cyan/Green */
+        .auth-container h1 {
+            margin-top: 0;
+            color: #00e5ff; /* Cyan */
+            font-size: 2.5rem;
+            letter-spacing: 2px;
+        }
+        
+        .tabs {
+            display: flex;
+            margin-bottom: 25px;
+            border-bottom: 1px solid #1f2d4a;
+        }
+        
+        .tab {
+            flex: 1;
+            padding: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            color: #64748b;
+            transition: 0.3s;
+        }
+        
+        .tab.active {
+            color: #00e5ff;
+            border-bottom: 2px solid #00e5ff;
+        }
+        
+        .form-group { display: none; }
+        .form-group.active { display: block; }
+        
+        /* 🎛️ Dark Theme Inputs to match HR Page */
+        input[type="text"], input[type="email"], input[type="password"] {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 15px;
+            border: 1px solid #2d3748;
+            border-radius: 8px;
+            background: #0f172a; /* Dark box instead of bright white */
+            color: #fff;
+            box-sizing: border-box;
+            outline: none;
+            transition: 0.3s;
+            font-family: monospace; /* Looks more tech-focused */
+        }
+        
+        input::placeholder { color: #475569; }
+        input:focus { 
+            border-color: #00e5ff; 
+            box-shadow: 0 0 8px rgba(0, 229, 255, 0.2);
+        }
+
+        /* 🛑 THE AUTOFILL KILLER: Forces browser autofill to match our dark theme */
+        input:-webkit-autofill,
+        input:-webkit-autofill:hover, 
+        input:-webkit-autofill:focus, 
+        input:-webkit-autofill:active{
+            -webkit-box-shadow: 0 0 0 30px #0f172a inset !important;
+            -webkit-text-fill-color: white !important;
+            transition: background-color 5000s ease-in-out 0s;
+        }
+        
+        .role-selector {
+            background: #0f172a;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            text-align: left;
+            border: 1px solid #2d3748;
+        }
+        
+        .role-selector label {
+            cursor: pointer;
+            margin-right: 15px;
+            font-size: 0.95rem;
+            color: #cbd5e1;
+        }
+        
+        /* 🟩 Button matching the ecosystem vibe */
+        .auth-btn {
+            width: 100%;
+            padding: 12px;
+            background: #00e676; /* Green */
+            color: #05050a;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.3s;
+            margin-top: 10px;
+        }
+        
+        .auth-btn:hover {
+            background: #00c853;
+            box-shadow: 0 0 15px rgba(0, 230, 118, 0.4);
+        }
     </style>
 </head>
-<body onload="document.getElementById('lf').reset(); document.getElementById('rf').reset();">
-    <div class="card">
-        <div class="brand-title">H.I.R.E.</div>
-        <p style="color: #a1a6b4; font-size: 12px; margin-top: 0; margin-bottom: 20px;">Secure Access Portal</p>
-        <div id="tabs">
-            <button id="lbtn" class="tab-btn active" onclick="sh('l')">Login</button>
-            <button id="rbtn" class="tab-btn" onclick="sh('r')">Register</button>
-        </div>
-        <form id="lf" autocomplete="off">
-            <input type="email" id="le" placeholder="Email Address" autocomplete="off">
-            <input type="password" id="lp" placeholder="Password" autocomplete="new-password">
-            <button type="button" class="btn" onclick="login()">Access Dashboard</button>
-        </form>
-        <form id="rf" style="display:none;" autocomplete="off">
-            <input type="text" id="rn" placeholder="Full Name" autocomplete="off">
-            <input type="email" id="re" placeholder="Email Address" autocomplete="off">
-            <select id="rr">
-                <option value="" disabled selected>Select Your Role</option>
-                <option value="Seeker">Job Seeker 🎓</option>
-                <option value="HR">Recruiter 🏢</option>
-            </select>
-            <input type="password" id="rp" placeholder="Create Password" autocomplete="new-password">
-            <button type="button" class="btn" style="background:#ff4b4b;" onclick="reg()">Join H.I.R.E.</button>
-        </form>
+<body>
+
+<div class="auth-container">
+    <h1>H.I.R.E.</h1>
+    <p style="color: #64748b; margin-bottom: 30px;">AI-Powered Recruitment Ecosystem</p>
+
+    <div class="tabs">
+        <div class="tab active" onclick="switchTab('login')">Sign In</div>
+        <div class="tab" onclick="switchTab('register')">Join Now</div>
     </div>
-    <script>
-        function sh(t){ 
-            document.getElementById('lf').style.display = t=='l'?'block':'none'; 
-            document.getElementById('rf').style.display = t=='r'?'block':'none';
-            document.getElementById('lbtn').className = t=='l'?'tab-btn active':'tab-btn';
-            document.getElementById('rbtn').className = t=='r'?'tab-btn active':'tab-btn';
-            document.getElementById('lf').reset(); document.getElementById('rf').reset();
+
+    <div id="form-login" class="form-group active">
+        <input type="email" id="log_email" placeholder="Email Address" autocomplete="nope" spellcheck="false">
+        <input type="password" id="log_pass" placeholder="Password" autocomplete="new-password">
+        <button class="auth-btn" onclick="submitLogin()">Access Portal</button>
+    </div>
+
+    <div id="form-register" class="form-group">
+        <input type="text" id="reg_name" placeholder="Full Name" autocomplete="nope">
+        <input type="email" id="reg_email" placeholder="Email Address" autocomplete="nope">
+        <input type="password" id="reg_pass" placeholder="Create Password" autocomplete="new-password">
+
+        <div class="role-selector">
+            <p style="margin: 0 0 10px 0; font-weight: bold; color: #fff;">I am joining as a:</p>
+            <label>
+                <input type="radio" id="role_seeker" name="role" value="Seeker" checked onchange="toggleCompanyField()"> 
+                👨‍💻 Job Seeker
+            </label>
+            <label>
+                <input type="radio" id="role_hr" name="role" value="HR" onchange="toggleCompanyField()"> 
+                🏢 Recruiter (HR)
+            </label>
+        </div>
+
+        <div id="company_input_div" style="display: none; margin-bottom: 15px;">
+            <input type="text" id="reg_company" placeholder="Company Name (e.g., Google, TCS)" autocomplete="nope">
+        </div>
+
+        <button class="auth-btn" onclick="submitRegistration()" style="background: #00e5ff; color: #000;">Create Account</button>
+    </div>
+</div>
+
+<script>
+    // 🛑 ULTIMATE AUTOFILL WIPE: This runs immediately after the page loads
+    // and forcefully empties the boxes if the browser tried to sneak details in.
+    window.onload = function() {
+        setTimeout(function() {
+            document.getElementById('log_email').value = '';
+            document.getElementById('log_pass').value = '';
+            document.getElementById('reg_name').value = '';
+            document.getElementById('reg_email').value = '';
+            document.getElementById('reg_pass').value = '';
+            document.getElementById('reg_company').value = '';
+        }, 50); // 50 milliseconds delay to beat the browser's autofill
+    };
+
+    // --- Tab Switching Logic ---
+    function switchTab(tabName) {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.form-group').forEach(f => f.classList.remove('active'));
+        
+        if(tabName === 'login') {
+            document.querySelectorAll('.tab')[0].classList.add('active');
+            document.getElementById('form-login').classList.add('active');
+        } else {
+            document.querySelectorAll('.tab')[1].classList.add('active');
+            document.getElementById('form-register').classList.add('active');
         }
-        async function reg(){
-            const d = {name:document.getElementById('rn').value, email:document.getElementById('re').value, role:document.getElementById('rr').value, pass:document.getElementById('rp').value};
-            if(!d.role) { alert("Please select a role!"); return; }
-            const r = await fetch('/register', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(d)});
-            const res = await r.json(); alert(res.status); if(res.status=='Success') sh('l');
+    }
+
+    // --- Show/Hide Company Field ---
+    function toggleCompanyField() {
+        const isHR = document.getElementById("role_hr").checked;
+        const companyDiv = document.getElementById("company_input_div");
+        const companyInput = document.getElementById("reg_company");
+        
+        if (isHR) {
+            companyDiv.style.display = "block"; 
+        } else {
+            companyDiv.style.display = "none";  
+            companyInput.value = ""; 
         }
-        async function login(){
-            const d = {email:document.getElementById('le').value, pass:document.getElementById('lp').value};
-            const r = await fetch('/login', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(d)});
-            const res = await r.json(); 
-            if(res.status === 'ok') {
-                if(res.role=='HR') location.href='/recruiter_page'; else location.href='/seeker_page';
-            } else { alert('Invalid Credentials!'); }
+    }
+
+    // --- Submit Registration to Python ---
+    function submitRegistration() {
+        let name = document.getElementById('reg_name').value;
+        let email = document.getElementById('reg_email').value;
+        let pass = document.getElementById('reg_pass').value;
+        let role = document.getElementById("role_seeker").checked ? "Seeker" : "HR";
+        let company = document.getElementById("reg_company").value;
+
+        if(!name || !email || !pass) {
+            alert("Please fill in all required fields."); return;
         }
-    </script>
+        if(role === "HR" && !company) {
+            alert("HR Recruiters must provide a Company Name."); return;
+        }
+
+        fetch('/register', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ name: name, email: email, pass: pass, role: role, company: company })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if(data.status === "Success") {
+                alert("Account Created Successfully! You can now log in.");
+                switchTab('login');
+                document.getElementById('reg_name').value = '';
+                document.getElementById('reg_email').value = '';
+                document.getElementById('reg_pass').value = '';
+                document.getElementById('reg_company').value = '';
+            } else {
+                alert("Registration failed. This email might already exist.");
+            }
+        }).catch(err => console.error(err));
+    }
+
+    // --- Submit Login to Python ---
+    function submitLogin() {
+        let email = document.getElementById('log_email').value;
+        let pass = document.getElementById('log_pass').value;
+
+        if(!email || !pass) {
+            alert("Please enter both email and password."); return;
+        }
+
+        fetch('/login', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ email: email, pass: pass })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if(data.status === "ok") {
+                if(data.role === "ADMIN") window.location.href = "/admin_page";
+                else if(data.role === "HR") window.location.href = "/recruiter_page";
+                else window.location.href = "/seeker_page";
+            } else {
+                alert("Invalid Credentials. Please try again.");
+            }
+        }).catch(err => console.error(err));
+    }
+</script>
+
 </body>
 </html>
