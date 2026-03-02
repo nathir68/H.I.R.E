@@ -1,321 +1,118 @@
-<!doctype html>
+<!DOCTYPE html>
 <html>
-  <head>
+<head>
     <title>H.I.R.E. - HR Office</title>
     <style>
-      body {
-        background: #0b1426;
-        color: white;
-        font-family: "Poppins", sans-serif;
-        display: flex;
-        margin: 0;
-        height: 100vh;
-      }
-      .side {
-        width: 340px;
-        background: rgba(255, 255, 255, 0.03);
-        padding: 30px;
-        border-right: 1px solid rgba(255, 255, 255, 0.1);
-        overflow-y: auto;
-        box-sizing: border-box;
-      }
-      .main {
-        flex: 1;
-        padding: 40px;
-        overflow-y: auto;
-      }
-      .glass {
-        background: rgba(255, 255, 255, 0.05);
-        padding: 25px;
-        border-radius: 12px;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        margin-bottom: 25px;
-      }
-      input,
-      textarea {
-        width: 100%;
-        background: rgba(255, 255, 255, 0.1);
-        border: 1px solid #334155;
-        padding: 12px;
-        color: white;
-        border-radius: 8px;
-        margin-bottom: 12px;
-        box-sizing: border-box;
-      }
-      .btn {
-        background: linear-gradient(45deg, #00c6ff, #0072ff);
-        border: none;
-        padding: 12px;
-        border-radius: 8px;
-        color: white;
-        font-weight: bold;
-        cursor: pointer;
-        width: 100%;
-      }
-      .job-card {
-        background: rgba(255, 255, 255, 0.08);
-        padding: 15px;
-        border-radius: 10px;
-        margin-bottom: 15px;
-        border-left: 5px solid #00c6ff;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-      }
-      .action-btns button {
-        border: none;
-        padding: 6px 12px;
-        border-radius: 5px;
-        cursor: pointer;
-        font-size: 11px;
-        font-weight: bold;
-        margin-left: 5px;
-      }
-      .top-nav {
-        display: flex;
-        justify-content: space-between;
-        margin-bottom: 20px;
-      }
-      .top-nav a,
-      .top-nav button {
-        color: #a1a6b4;
-        text-decoration: none;
-        font-weight: bold;
-        background: none;
-        border: none;
-        cursor: pointer;
-        font-size: 14px;
-      }
-      .top-nav a:hover,
-      .top-nav button:hover {
-        color: #ff4b4b;
-      }
-      table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-top: 20px;
-      }
-      th,
-      td {
-        padding: 15px;
-        text-align: left;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-      }
-      .brand {
-        font-size: 28px;
-        font-weight: bold;
-        background: linear-gradient(45deg, #00c6ff, #0072ff);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        margin-bottom: 20px;
-        display: block;
-      }
+        body { background: #0b1426; color: white; font-family: 'Poppins', sans-serif; display: flex; margin: 0; height: 100vh; }
+        .side { width: 340px; background: rgba(255, 255, 255, 0.03); padding: 30px; border-right: 1px solid rgba(255,255,255,0.1); overflow-y: auto; box-sizing: border-box; }
+        .main { flex: 1; padding: 40px; overflow-y: auto; }
+        .glass { background: rgba(255, 255, 255, 0.05); padding: 25px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); margin-bottom: 25px; }
+        input, textarea { width: 100%; background: rgba(255, 255, 255, 0.1); border: 1px solid #334155; padding: 12px; color: white; border-radius: 8px; margin-bottom: 12px; box-sizing: border-box; }
+        .btn { background: linear-gradient(45deg, #00c6ff, #0072ff); border: none; padding: 12px; border-radius: 8px; color: white; font-weight: bold; cursor: pointer; width: 100%; }
+        .job-card { background: rgba(255,255,255,0.08); padding: 15px; border-radius: 10px; margin-bottom: 15px; border-left: 5px solid #00c6ff; display: flex; justify-content: space-between; align-items: center; }
+        .action-btns button { border: none; padding: 6px 12px; border-radius: 5px; cursor: pointer; font-size: 11px; font-weight: bold; margin-left: 5px; }
+        .top-nav { display: flex; justify-content: space-between; margin-bottom: 20px; }
+        .top-nav a, .top-nav button { color: #a1a6b4; text-decoration: none; font-weight: bold; background: none; border: none; cursor: pointer; font-size: 14px; }
+        .top-nav a:hover, .top-nav button:hover { color: #ff4b4b; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 15px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .brand { font-size: 28px; font-weight: bold; background: linear-gradient(45deg, #00c6ff, #0072ff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 20px; display: block; }
     </style>
-  </head>
-  <body onload="loadMyJobs()">
+</head>
+<body onload="loadMyJobs()">
     <div class="side">
-      <div class="top-nav">
-        <a href="/logout">← Logout</a
-        ><button onclick="delAccount()">🗑️ Delete Account</button>
-      </div>
-      <div class="brand">H.I.R.E. Office 🏢</div>
-      <div class="glass">
-        <h4>📢 Post Vacancy</h4>
-        <input type="text" id="jt" placeholder="Job Title" /><input
-          type="text"
-          id="jc"
-          placeholder="Company Name"
-        /><textarea
-          id="js"
-          style="height: 80px"
-          placeholder="Skills Required"
-        ></textarea>
-        <button class="btn" onclick="postJob()">Broadcast Job</button>
-      </div>
-      <h4>Your Active Posts</h4>
-      <div id="jobContainer"></div>
+        <div class="top-nav"><a href="/logout">← Logout</a><button onclick="delAccount()">🗑️ Delete Account</button></div>
+        <div class="brand">H.I.R.E. Office 🏢</div>
+        <div class="glass">
+            <h4>📢 Post Vacancy</h4>
+            <input type="text" id="jt" placeholder="Job Title"><input type="text" id="jc" placeholder="Company Name"><textarea id="js" style="height: 80px;" placeholder="Skills Required"></textarea>
+            <button class="btn" onclick="postJob()">Broadcast Job</button>
+        </div>
+        <h4>Your Active Posts</h4><div id="jobContainer"></div>
     </div>
     <div class="main">
-      <div class="glass">
-        <h1 style="color: #00c6ff">⚙️ AI Resume Screening</h1>
-        <p style="color: #a1a6b4">
-          Rank candidates against a specific Job Description.
-        </p>
-        <div style="display: flex; gap: 20px">
-          <div style="flex: 1">
-            <input type="text" id="rl" placeholder="Target Role" />
-          </div>
-          <div style="flex: 2">
-            <textarea
-              id="jd"
-              style="height: 60px"
-              placeholder="Paste Job Description here..."
-            ></textarea>
-          </div>
+        <div class="glass">
+            <h1 style="color: #00c6ff;">⚙️ AI Resume Screening</h1>
+            <p style="color: #a1a6b4;">Rank candidates against a specific Job Description.</p>
+            <div style="display: flex; gap: 20px;">
+                <div style="flex: 1;"><input type="text" id="rl" placeholder="Target Role"></div>
+                <div style="flex: 2;"><textarea id="jd" style="height: 60px;" placeholder="Paste Job Description here..."></textarea></div>
+            </div>
+            <label for="multi" style="background:#334155; padding:12px; border-radius:8px; cursor:pointer; display:block; text-align:center; font-weight:bold; margin-top: 10px;">📂 Select Batch Resumes (PDF)</label>
+            <input type="file" id="multi" multiple style="display:none;" onchange="document.getElementById('fc').innerText = this.files.length + ' files selected'">
+            <p id="fc" style="text-align:center; font-size:12px; color: #00ff88; margin-top: 5px;"></p>
+            <button class="btn" style="background: #00ff88; color: black; margin-top: 10px;" onclick="startRanking()">🚀 Run AI Ranking</button>
         </div>
-        <label
-          for="multi"
-          style="
-            background: #334155;
-            padding: 12px;
-            border-radius: 8px;
-            cursor: pointer;
-            display: block;
-            text-align: center;
-            font-weight: bold;
-            margin-top: 10px;
-          "
-          >📂 Select Batch Resumes (PDF)</label
-        >
-        <input
-          type="file"
-          id="multi"
-          multiple
-          style="display: none"
-          onchange="
-            document.getElementById('fc').innerText =
-              this.files.length + ' files selected'
-          "
-        />
-        <p
-          id="fc"
-          style="
-            text-align: center;
-            font-size: 12px;
-            color: #00ff88;
-            margin-top: 5px;
-          "
-        ></p>
-        <button
-          class="btn"
-          style="background: #00ff88; color: black; margin-top: 10px"
-          onclick="startRanking()"
-        >
-          🚀 Run AI Ranking
-        </button>
-      </div>
-      <h3>Ranking Results</h3>
-      <table>
-        <thead>
-          <tr style="border-bottom: 2px solid #334155">
-            <th align="left">Rank</th>
-            <th align="left">Candidate File</th>
-            <th align="left">AI Score</th>
-            <th align="left">Decision</th>
-          </tr>
-        </thead>
-        <tbody id="rb"></tbody>
-      </table>
+        <h3>Ranking Results</h3>
+        <table>
+            <thead><tr style="border-bottom: 2px solid #334155;"><th align="left">Rank</th><th align="left">Candidate File</th><th align="left">AI Score</th><th align="left">Decision</th></tr></thead>
+            <tbody id="rb"></tbody>
+        </table>
     </div>
     <script>
-      // NEW: Store jobs in a global list to avoid string-breaking bugs
-      let currentJobs = [];
+        let currentJobs = []; 
 
-      async function loadMyJobs() {
-        const r = await fetch("/get_my_jobs");
-        currentJobs = await r.json(); // Save the data here
-
-        const container = document.getElementById("jobContainer");
-        container.innerHTML = "";
-
-        currentJobs.forEach((j) => {
-          container.innerHTML += `
+        async function loadMyJobs() {
+            const r = await fetch('/get_my_jobs'); 
+            currentJobs = await r.json(); 
+            const container = document.getElementById('jobContainer'); 
+            container.innerHTML = "";
+            currentJobs.forEach(j => { 
+                container.innerHTML += `
                 <div class="job-card">
                     <div><b>${j.title}</b><br><small>${j.company}</small></div>
                     <div class="action-btns">
                         <button style="background:#ffcc00; color:black;" onclick="editJ(${j.id})">Edit</button>
                         <button style="background:#ff4b4b; color:white;" onclick="deleteJ(${j.id})">Del</button>
                     </div>
-                </div>`;
-        });
-      }
-
-      async function postJob() {
-        const d = {
-          title: document.getElementById("jt").value,
-          company: document.getElementById("jc").value,
-          skills: document.getElementById("js").value,
-        };
-        if (!d.title || !d.skills)
-          return alert("Title and Skills are required!");
-        await fetch("/post_job", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(d),
-        });
-        loadMyJobs();
-        document.getElementById("jt").value = "";
-        document.getElementById("jc").value = "";
-        document.getElementById("js").value = "";
-      }
-
-      async function deleteJ(id) {
-        if (confirm("Delete this vacancy permanently?")) {
-          await fetch(`/delete_job/${id}`, { method: "POST" });
-          loadMyJobs();
-        }
-      }
-
-      function editJ(id) {
-        // Find the specific job data from our global list
-        const job = currentJobs.find((j) => j.id === id);
-        if (!job) return;
-
-        // Ask for new details. If user clicks 'Cancel', it returns null and stops.
-        const nt = prompt("Update Title:", job.title);
-        if (nt === null) return;
-
-        const nc = prompt("Update Company:", job.company);
-        if (nc === null) return;
-
-        const ns = prompt("Update Skills:", job.skills);
-        if (ns === null) return;
-
-        // Prevent saving completely empty titles/skills
-        if (nt.trim() === "" || ns.trim() === "") {
-          alert("Title and Skills cannot be empty!");
-          return;
+                </div>`; 
+            });
         }
 
-        fetch(`/update_job/${id}`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ title: nt, company: nc, skills: ns }),
-        }).then(() => loadMyJobs());
-      }
-
-      async function startRanking() {
-        const fd = new FormData();
-        fd.append("role", document.getElementById("rl").value);
-        fd.append("jd", document.getElementById("jd").value);
-
-        const files = document.getElementById("multi").files;
-        if (files.length === 0) return alert("Please select resumes!");
-
-        for (let f of files) fd.append("resumes", f);
-        document.getElementById("rb").innerHTML =
-          "<tr><td colspan='4' style='text-align:center; color:#00c6ff;'>Analyzing resumes... Please wait.</td></tr>";
-
-        const r = await fetch("/rank", { method: "POST", body: fd });
-        const d = await r.json();
-        const b = document.getElementById("rb");
-        b.innerHTML = "";
-
-        d.forEach((x) => {
-          b.innerHTML += `<tr><td>#${x.rank}</td><td>${x.name}</td><td><b>${x.score}</b></td><td style="color:${x.status.includes("Shortlisted") ? "#00ff88" : "#ff4b4b"}">${x.status}</td></tr>`;
-        });
-      }
-
-      async function delAccount() {
-        if (
-          confirm(
-            "⚠️ Warning: Delete your account and all your posted jobs permanently?",
-          )
-        ) {
-          await fetch("/delete_account", { method: "POST" });
-          window.location.href = "/";
+        async function postJob() {
+            const d = {title:document.getElementById('jt').value, company:document.getElementById('jc').value, skills:document.getElementById('js').value};
+            if(!d.title || !d.skills) return alert("Title and Skills are required!");
+            await fetch('/post_job', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(d)});
+            loadMyJobs(); document.getElementById('jt').value=''; document.getElementById('jc').value=''; document.getElementById('js').value='';
         }
-      }
+
+        async function deleteJ(id) { 
+            if(confirm("Delete this vacancy permanently?")) { 
+                await fetch(`/delete_job/${id}`, { method: 'POST' }); 
+                loadMyJobs(); 
+            } 
+        }
+
+        function editJ(id) {
+            const job = currentJobs.find(j => j.id === id);
+            if(!job) return;
+            const nt = prompt("Update Title:", job.title); if (nt === null) return; 
+            const nc = prompt("Update Company:", job.company); if (nc === null) return;
+            const ns = prompt("Update Skills:", job.skills); if (ns === null) return;
+            if (nt.trim() === '' || ns.trim() === '') return alert("Fields cannot be empty!");
+
+            fetch(`/update_job/${id}`, { 
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, 
+                body: JSON.stringify({ title: nt, company: nc, skills: ns }) 
+            }).then(() => loadMyJobs()); 
+        }
+
+        async function startRanking() {
+            const fd = new FormData(); fd.append('role', document.getElementById('rl').value); fd.append('jd', document.getElementById('jd').value);
+            const files = document.getElementById('multi').files; if(files.length === 0) return alert("Please select resumes!");
+            for(let f of files) fd.append('resumes', f); 
+            document.getElementById('rb').innerHTML = "<tr><td colspan='4' style='text-align:center; color:#00c6ff;'>Analyzing resumes... Please wait.</td></tr>";
+            
+            const r = await fetch('/rank', { method: 'POST', body: fd }); const d = await r.json(); 
+            const b = document.getElementById('rb'); b.innerHTML = "";
+            d.forEach(x => { b.innerHTML += `<tr><td>#${x.rank}</td><td>${x.name}</td><td><b>${x.score}</b></td><td style="color:${x.status.includes('Shortlisted') ? '#00ff88' : '#ff4b4b'}">${x.status}</td></tr>`; });
+        }
+
+        async function delAccount() { 
+            if(confirm("⚠️ Warning: Delete your account and all your posted jobs permanently?")) { 
+                await fetch('/delete_account', { method: 'POST' }); window.location.href = '/'; 
+            } 
+        }
     </script>
-  </body>
+</body>
 </html>

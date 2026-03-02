@@ -19,6 +19,24 @@ def get_db():
     conn.row_factory = sqlite3.Row
     return conn
 
+def init_db():
+    conn = get_db()
+    conn.execute('CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, name TEXT, email TEXT UNIQUE, role TEXT, password TEXT)')
+    conn.execute('CREATE TABLE IF NOT EXISTS jobs (id INTEGER PRIMARY KEY, title TEXT, skills TEXT, company TEXT, hr_email TEXT)')
+    conn.commit()
+    conn.close()
+
+# FIX: Automatically clear out orphaned jobs on server start
+def clean_ghost_jobs():
+    conn = get_db()
+    conn.execute('DELETE FROM jobs WHERE hr_email NOT IN (SELECT email FROM users WHERE role = "HR")')
+    conn.commit()
+    conn.close()
+
+init_db()
+clean_ghost_jobs()
+
+# --- HELPER FUNCTIONS ---
 def extract_clean_text(file):
     try:
         pdf = PyPDF2.PdfReader(file)
@@ -44,26 +62,20 @@ def send_resume_to_hr(hr_email, seeker_name, job_title, resume_file):
         return True
     except: return False
 
-# NEW: Function to notify seekers when HR shortlists them
 def send_mail_to_seeker(seeker_email, job_title, hr_email):
     try:
         msg = MIMEMultipart()
-        msg['Subject'] = f"Congratulations! You are Shortlisted for {job_title}"
-        msg['From'] = SENDER_EMAIL
-        msg['To'] = seeker_email
-        
+        msg['Subject'] = f"Congratulations! Shortlisted for {job_title}"
+        msg['From'], msg['To'] = SENDER_EMAIL, seeker_email
         body = f"Hello Candidate,\n\nGreat news! Your resume was evaluated by our AI Screening System and you have been SHORTLISTED for the role of '{job_title}'.\n\nThe HR team ({hr_email}) will review your profile and contact you for the next steps.\n\nBest Regards,\nH.I.R.E. Ecosystem Team"
         msg.attach(MIMEText(body, 'plain'))
-        
         with smtplib.SMTP_SSL('smtp.gmail.com', 465) as s:
             s.login(SENDER_EMAIL, SENDER_PASSWORD)
             s.sendmail(SENDER_EMAIL, seeker_email, msg.as_string())
         return True
-    except Exception as e: 
-        print(f"Failed to send to {seeker_email}: {e}")
-        return False
+    except: return False
 
-# --- ROUTES (Auth, Post Job, etc. remain the same) ---
+# --- NAVIGATION & AUTH ROUTES ---
 @app.route('/')
 def home(): return render_template('front.html')
 
@@ -96,6 +108,23 @@ def register():
         return jsonify({"status": "Success"})
     except: return jsonify({"status": "Fail"})
 
+@app.route('/delete_account', methods=['POST'])
+def delete_account():
+    user_id = session.get('user_id')
+    hr_email = session.get('email')
+    if not user_id: return jsonify({"status": "Unauthorized"})
+    
+    conn = get_db()
+    # FIX: Explicitly delete jobs linked to this HR to prevent ghosts
+    if session.get('role') == 'HR':
+        conn.execute('DELETE FROM jobs WHERE hr_email = ?', (hr_email,))
+        
+    conn.execute('DELETE FROM users WHERE id = ?', (user_id,))
+    conn.commit(); conn.close()
+    session.clear()
+    return jsonify({"status": "Account Deleted"})
+
+# --- HR MANAGEMENT ROUTES ---
 @app.route('/post_job', methods=['POST'])
 def post_job():
     d = request.json
@@ -129,23 +158,13 @@ def get_my_jobs():
 @app.route('/get_public_jobs')
 def get_public_jobs():
     conn = get_db()
-    j = conn.execute('SELECT * FROM jobs').fetchall()
+    # FIX: Subquery completely eliminates multiplication/duplicate issues!
+    query = 'SELECT * FROM jobs WHERE hr_email IN (SELECT email FROM users WHERE role = "HR")'
+    j = conn.execute(query).fetchall()
     conn.close()
     return jsonify([dict(row) for row in j])
 
-@app.route('/delete_account', methods=['POST'])
-def delete_account():
-    user_id = session.get('user_id')
-    if not user_id: return jsonify({"status": "Unauthorized"})
-    conn = get_db()
-    conn.execute('DELETE FROM users WHERE id = ?', (user_id,))
-    if session.get('role') == 'HR':
-        conn.execute('DELETE FROM jobs WHERE hr_email = ?', (session['email'],))
-    conn.commit(); conn.close()
-    session.clear()
-    return jsonify({"status": "Account Deleted"})
-
-# --- UPDATED AI SCREENING & NOTIFICATION ROUTE ---
+# --- AI MATCHING & RANKING ROUTES ---
 @app.route('/rank', methods=['POST'])
 def rank():
     role, jd = request.form.get('role'), request.form.get('jd')
@@ -153,7 +172,7 @@ def rank():
     resumes_data = []
     
     for f in files:
-        t, seeker_email = extract_clean_text(f) # FIX: Extracting email from PDF
+        t, seeker_email = extract_clean_text(f)
         if t: resumes_data.append({"name": f.filename, "text": t, "email": seeker_email})
         
     if not resumes_data: return jsonify([])
@@ -167,14 +186,8 @@ def rank():
     out = []
     for i, r in enumerate(sorted_res):
         m = round(r['score']*100, 2)
-        if m > 40:
-            status = "Shortlisted ✅"
-            # FIX: Send email to the shortlisted seeker
-            if r['email']:
-                send_mail_to_seeker(r['email'], role, session['email'])
-        else:
-            status = "Rejected"
-            
+        status = "Shortlisted ✅" if m > 40 else "Rejected"
+        if m > 40 and r['email']: send_mail_to_seeker(r['email'], role, session['email'])
         out.append({"rank": i+1, "name": r['name'], "score": f"{m}%", "status": status})
     return jsonify(out)
 
@@ -184,7 +197,9 @@ def recommend():
     file = request.files.get('resume')
     txt, _ = extract_clean_text(file)
     conn = get_db()
-    jobs = conn.execute('SELECT * FROM jobs').fetchall()
+    
+    # FIX: Subquery completely eliminates multiplication/duplicate issues!
+    jobs = conn.execute('SELECT * FROM jobs WHERE hr_email IN (SELECT email FROM users WHERE role = "HR")').fetchall()
     conn.close()
     if not jobs: return jsonify([])
     
