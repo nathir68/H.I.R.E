@@ -5,6 +5,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.application import MIMEApplication
+from collections import Counter # NEW: Required for Fake Detection
 
 app = Flask(__name__)
 app.secret_key = "hire_master_key_2026"
@@ -26,7 +27,6 @@ def init_db():
     conn.commit()
     conn.close()
 
-# FIX: Automatically clear out orphaned jobs on server start
 def clean_ghost_jobs():
     conn = get_db()
     conn.execute('DELETE FROM jobs WHERE hr_email NOT IN (SELECT email FROM users WHERE role = "HR")')
@@ -45,6 +45,33 @@ def extract_clean_text(file):
         clean = re.sub(r'[^a-zA-Z\s]', ' ', text).lower()
         return " ".join(clean.split()), (email_match.group(0).strip() if email_match else None)
     except: return "", None
+
+# --- NEW: FAKE RESUME DETECTION ENGINE ---
+def detect_fake_resume(text):
+    flags = []
+    text_lower = text.lower()
+    words = text_lower.split()
+    
+    # Rule 1: Suspiciously Long (Catches invisible white-text keyword stuffing)
+    if len(words) > 2000:
+        flags.append("Suspicious Length (Hidden Text?)")
+        
+    # Rule 2: Placeholder Text (Catches lazy copy-paste templates)
+    placeholders = ["lorem ipsum", "enter your name", "your company here", "objective goes here", "123-456-7890"]
+    for p in placeholders:
+        if p in text_lower:
+            flags.append("Template Placeholders Detected")
+            
+    # Rule 3: Extreme Keyword Spamming (>40 repeats of a specific tech word)
+    word_counts = Counter([w for w in words if len(w) > 3])
+    if word_counts:
+        most_common = word_counts.most_common(1)[0]
+        if most_common[1] > 40:
+            flags.append(f"Keyword Spam ('{most_common[0]}')")
+            
+    if flags:
+        return True, " | ".join(flags)
+    return False, "Authentic"
 
 def send_resume_to_hr(hr_email, seeker_name, job_title, resume_file):
     try:
@@ -115,7 +142,6 @@ def delete_account():
     if not user_id: return jsonify({"status": "Unauthorized"})
     
     conn = get_db()
-    # FIX: Explicitly delete jobs linked to this HR to prevent ghosts
     if session.get('role') == 'HR':
         conn.execute('DELETE FROM jobs WHERE hr_email = ?', (hr_email,))
         
@@ -158,13 +184,12 @@ def get_my_jobs():
 @app.route('/get_public_jobs')
 def get_public_jobs():
     conn = get_db()
-    # FIX: Subquery completely eliminates multiplication/duplicate issues!
     query = 'SELECT * FROM jobs WHERE hr_email IN (SELECT email FROM users WHERE role = "HR")'
     j = conn.execute(query).fetchall()
     conn.close()
     return jsonify([dict(row) for row in j])
 
-# --- AI MATCHING & RANKING ROUTES ---
+# --- UPDATED: AI SCREENING WITH FAKE DETECTION ---
 @app.route('/rank', methods=['POST'])
 def rank():
     role, jd = request.form.get('role'), request.form.get('jd')
@@ -180,15 +205,28 @@ def rank():
     emb = model.encode([re.sub(r'[^a-zA-Z\s]', ' ', jd).lower()] + [r['text'] for r in resumes_data])
     scores = cosine_similarity([emb[0]], emb[1:])[0]
     
-    results = [{"name": resumes_data[i]['name'], "email": resumes_data[i]['email'], "score": float(scores[i])} for i in range(len(resumes_data))]
+    results = [{"name": resumes_data[i]['name'], "text": resumes_data[i]['text'], "email": resumes_data[i]['email'], "score": float(scores[i])} for i in range(len(resumes_data))]
     sorted_res = sorted(results, key=lambda x: x['score'], reverse=True)
     
     out = []
     for i, r in enumerate(sorted_res):
         m = round(r['score']*100, 2)
-        status = "Shortlisted ✅" if m > 40 else "Rejected"
-        if m > 40 and r['email']: send_mail_to_seeker(r['email'], role, session['email'])
-        out.append({"rank": i+1, "name": r['name'], "score": f"{m}%", "status": status})
+        
+        # --- TRIGGER FAKE DETECTION HERE ---
+        is_fake, fake_reason = detect_fake_resume(r['text'])
+        
+        if is_fake:
+            status = f"🚩 Fake Alert: {fake_reason}"
+            score_display = "N/A"
+        elif m > 40:
+            status = "Shortlisted ✅"
+            score_display = f"{m}%"
+            if r['email']: send_mail_to_seeker(r['email'], role, session['email'])
+        else:
+            status = "Rejected"
+            score_display = f"{m}%"
+            
+        out.append({"rank": i+1, "name": r['name'], "score": score_display, "status": status})
     return jsonify(out)
 
 @app.route('/recommend', methods=['POST'])
@@ -198,7 +236,6 @@ def recommend():
     txt, _ = extract_clean_text(file)
     conn = get_db()
     
-    # FIX: Subquery completely eliminates multiplication/duplicate issues!
     jobs = conn.execute('SELECT * FROM jobs WHERE hr_email IN (SELECT email FROM users WHERE role = "HR")').fetchall()
     conn.close()
     if not jobs: return jsonify([])
