@@ -1,74 +1,240 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>H.I.R.E. | Admin panel</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>H.I.R.E. | Admin Panel</title>
     <style>
-        body { background: #0b1426; color: white; font-family: 'Poppins', sans-serif; display: flex; margin: 0; height: 100vh; }
-        .side { width: 300px; background: rgba(255, 255, 255, 0.03); padding: 30px; border-right: 1px solid rgba(255,255,255,0.1); display: flex; flex-direction: column; }
-        .main { flex: 1; padding: 40px; overflow-y: auto; }
-        .brand { font-size: 32px; font-weight: bold; background: linear-gradient(45deg, #00ff88, #00c6ff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .glass { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); padding: 25px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); margin-bottom: 25px; }
-        .btn { background: linear-gradient(45deg, #00ff88, #00c6ff); border: none; padding: 15px; border-radius: 8px; color: #0b1426; font-weight: bold; cursor: pointer; width: 100%; font-size: 16px; margin-top: 20px; transition: 0.3s; }
-        .btn:hover { box-shadow: 0 0 20px rgba(0, 255, 136, 0.5); transform: translateY(-2px); }
-        table { width: 100%; border-collapse: collapse; font-size: 14px; }
-        th, td { padding: 12px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.05); }
-        th { color: #00c6ff; }
-        .badge { background: rgba(0, 198, 255, 0.1); border: 1px solid #00c6ff; padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: bold; color: #00c6ff; }
+        body { 
+            margin: 0; 
+            padding: 0; 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background-color: #0b1121; 
+            color: white; 
+            display: flex; 
+            height: 100vh; 
+        }
+        
+        /* ⬅️ Sidebar Styling */
+        .sidebar { 
+            width: 260px; 
+            background: #0f172a; 
+            padding: 30px 20px; 
+            border-right: 1px solid #1f2d4a; 
+            display: flex; 
+            flex-direction: column; 
+        }
+        .brand-title { 
+            font-size: 32px; 
+            font-weight: bold; 
+            color: #00e676; 
+            margin: 0; 
+        }
+        .brand-sub { 
+            color: #94a3b8; 
+            font-size: 14px; 
+            margin-bottom: 40px; 
+        }
+        
+        .imap-btn { 
+            background: #00e5ff; 
+            color: #000; 
+            border: none; 
+            padding: 15px; 
+            border-radius: 8px; 
+            font-weight: bold; 
+            font-size: 16px; 
+            cursor: pointer; 
+            transition: 0.3s; 
+            width: 100%;
+        }
+        .imap-btn:hover { 
+            box-shadow: 0 0 15px rgba(0, 229, 255, 0.5); 
+            transform: translateY(-2px); 
+        }
+
+        /* 📥 New Live IMAP List Box */
+        .imap-results-box {
+            margin-top: 25px;
+            background: rgba(0, 229, 255, 0.05);
+            border: 1px solid rgba(0, 229, 255, 0.2);
+            border-radius: 8px;
+            padding: 15px;
+            display: none; /* Hidden until a resume arrives */
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .imap-results-box h4 {
+            margin: 0 0 15px 0;
+            color: #00e5ff;
+            font-size: 14px;
+            border-bottom: 1px solid rgba(0, 229, 255, 0.2);
+            padding-bottom: 5px;
+        }
+        .imap-item {
+            font-size: 13px;
+            color: #cbd5e1;
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px dashed #1f2d4a;
+        }
+        .imap-item b { color: #fff; }
+        .imap-item .score { color: #00e676; font-weight: bold; }
+
+        .logout-btn { 
+            margin-top: auto; 
+            color: #ff4b4b; 
+            text-decoration: none; 
+            font-weight: bold; 
+            font-size: 16px; 
+            transition: 0.3s; 
+        }
+        .logout-btn:hover { color: #ff1c1c; }
+        
+        /* ➡️ Main Content Styling */
+        .main-content { 
+            flex-grow: 1; 
+            padding: 40px; 
+            overflow-y: auto; 
+        }
+        
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            margin-top: 20px; 
+            background: #131c31; 
+            border-radius: 10px; 
+            overflow: hidden; 
+        }
+        th, td { 
+            padding: 15px; 
+            text-align: left; 
+            border-bottom: 1px solid #1f2d4a; 
+        }
+        th { 
+            color: #00e5ff; 
+            font-weight: bold; 
+        }
+        td { color: #cbd5e1; }
+        .role-badge { 
+            padding: 4px 10px; 
+            border-radius: 12px; 
+            font-size: 12px; 
+            font-weight: bold; 
+            border: 1px solid #00e5ff; 
+            color: #00e5ff; 
+        }
     </style>
 </head>
-<body onload="fetchData()">
-    <div class="side">
-        <div class="brand">H.I.R.E.</div>
-        <p style="color:#a1a6b4; font-size: 14px; margin-top: 0;">System Admin Console</p>
-        
-        <button class="btn" onclick="syncEmail()">🔄 Run IMAP Sync</button>
-        
-        <div style="margin-top: auto;">
-            <a href="/logout" style="color: #ff4b4b; text-decoration: none; font-weight: bold;">← Terminate Session</a>
-        </div>
-    </div>
-    <div class="main">
-        <h1 style="color: #00ff88; margin-top: 0;">  View Dashboard</h1>
-        
-        <div class="glass">
-            <h3>System Activity Logs (JSON)</h3>
-            <table>
-                <thead><tr><th>Timestamp</th><th>User</th><th>Role</th><th>Action</th><th>Details</th></tr></thead>
-                <tbody id="logsTable"></tbody>
-            </table>
-        </div>
-        
-        <div style="display: flex; gap: 20px;">
-            <div class="glass" style="flex: 1;">
-                <h3>Users Database</h3>
-                <table><tbody id="usersTable"></tbody></table>
-            </div>
-            <div class="glass" style="flex: 1;">
-                <h3>Active Jobs</h3>
-                <table><tbody id="jobsTable"></tbody></table>
-            </div>
-        </div>
-    </div>
-    
-    <script>
-        async function fetchData() {
-            const r = await fetch('/api/god_view'); const d = await r.json();
-            
-            let lHTML = ''; d.logs.slice(0, 10).forEach(l => lHTML += `<tr><td style="color:#a1a6b4;">${l.timestamp}</td><td>${l.email}</td><td><span class="badge">${l.role}</span></td><td><b style="color:white;">${l.action}</b></td><td><small>${l.details}</small></td></tr>`);
-            document.getElementById('logsTable').innerHTML = lHTML;
-            
-            let uHTML = ''; d.users.forEach(u => uHTML += `<tr><td>${u.name}</td><td>${u.email}</td><td><span class="badge">${u.role}</span></td></tr>`);
-            document.getElementById('usersTable').innerHTML = uHTML;
+<body>
 
-            let jHTML = ''; d.jobs.forEach(j => jHTML += `<tr><td><b style="color:white;">${j.title}</b><br><small style="color:#00ff88;">Subject ID: JOB-${j.id}</small></td><td style="color:#a1a6b4;">${j.hr_email}</td></tr>`);
-            document.getElementById('jobsTable').innerHTML = jHTML;
-        }
+    <div class="sidebar">
+        <h1 class="brand-title">H.I.R.E.</h1>
+        <p class="brand-sub">System Admin Console</p>
         
-        async function syncEmail() {
-            alert("Initiating Zero-Touch Email Sync... Please wait.");
-            const r = await fetch('/sync_inbox'); const d = await r.json();
-            alert(d.status); fetchData();
+        <button class="imap-btn" onclick="forceSync()">🔄 Run IMAP Sync</button>
+        <p style="color: #64748b; font-size: 12px; margin-top: 10px; text-align: center;">(Auto-syncing every 60s)</p>
+        
+        <div id="imap-results" class="imap-results-box">
+            <h4>📥 Live Routed Resumes</h4>
+            <div id="imap-list"></div>
+        </div>
+
+        <a href="/logout" class="logout-btn">← Terminate Session</a>
+    </div>
+
+    <div class="main-content">
+        <h2 style="color: white; margin-top: 0;">System Activity Logs</h2>
+        
+        <table>
+            <thead>
+                <tr>
+                    <th>Timestamp</th>
+                    <th>User</th>
+                    <th>Role</th>
+                    <th>Action</th>
+                    <th>Details</th>
+                </tr>
+            </thead>
+            <tbody id="log-table-body">
+                </tbody>
+        </table>
+    </div>
+
+    <script>
+        // 🔄 Function 1: Fetch and display the System Logs
+        function fetchGodView() {
+            fetch('/api/god_view')
+            .then(res => res.json())
+            .then(data => {
+                let tbody = document.getElementById('log-table-body');
+                tbody.innerHTML = '';
+                data.logs.forEach(log => {
+                    let roleDisplay = log.role === 'ADMIN' ? `<span class="role-badge" style="border-color:#00e5ff; color:#00e5ff;">ADMIN</span>` : 
+                                      log.role === 'HR' ? `<span class="role-badge" style="border-color:#00e676; color:#00e676;">HR</span>` : 
+                                      `<span class="role-badge" style="border-color:#ff4b4b; color:#ff4b4b;">Seeker</span>`;
+                    
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>${log.timestamp}</td>
+                            <td>${log.email}</td>
+                            <td>${roleDisplay}</td>
+                            <td style="color:white; font-weight:bold;">${log.action}</td>
+                            <td>${log.details}</td>
+                        </tr>
+                    `;
+                });
+            });
         }
+
+        // 📥 Function 2: Fetch and display the live IMAP Routed Resumes
+        function fetchImapHistory() {
+            fetch('/get_imap_history')
+            .then(res => res.json())
+            .then(data => {
+                if(data.length > 0) {
+                    document.getElementById('imap-results').style.display = 'block';
+                    let listHtml = '';
+                    data.forEach(item => {
+                        listHtml += `
+                            <div class="imap-item">
+                                <b>Job:</b> ${item.job}<br>
+                                <b>Candidate:</b> ${item.email}<br>
+                                <b>Match:</b> <span class="score">${item.score}</span> 
+                                <span style="float:right; font-size:11px;">${item.timestamp}</span>
+                            </div>
+                        `;
+                    });
+                    document.getElementById('imap-list').innerHTML = listHtml;
+                }
+            });
+        }
+
+        // ⚡ Function 3: Manual Force Sync Button
+        function forceSync() {
+            const btn = document.querySelector('.imap-btn');
+            btn.innerText = "Processing...";
+            fetch('/sync_inbox')
+            .then(res => res.json())
+            .then(data => {
+                alert(data.status);
+                btn.innerText = "🔄 Run IMAP Sync";
+                fetchImapHistory(); // Refresh the list instantly
+                fetchGodView();     // Refresh the logs instantly
+            });
+        }
+
+        // Run both fetches immediately when the page loads
+        window.onload = function() {
+            fetchGodView();
+            fetchImapHistory();
+        };
+
+        // Auto-refresh BOTH the logs and the IMAP list every 10 seconds!
+        setInterval(() => {
+            fetchGodView();
+            fetchImapHistory();
+        }, 10000);
     </script>
 </body>
 </html>

@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for
-import PyPDF2, re, smtplib, sqlite3, os, imaplib, email, json, pickle, threading, io
+import PyPDF2, re, smtplib, sqlite3, os, imaplib, email, json, threading, io, time
 from email.header import decode_header
 from datetime import datetime
 from sentence_transformers import SentenceTransformer
@@ -8,35 +8,52 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.application import MIMEApplication
 from collections import Counter
-
-# --- TENSORFLOW IMPORTS ---
-import tensorflow as tf
-import numpy as np
-from tensorflow.keras.preprocessing.sequence import pad_sequences
+import google.generativeai as genai
 
 app = Flask(__name__)
 app.secret_key = "hire_master_key_2026"
 
-# 1. Load Sentence Transformer (For Job Matching)
+# --- 🤖 AGENTIC AI WORKFLOW SETUP (CLOUD API) ---
+GENAI_API_KEY = "AIzaSyD-2R1p1nVZttghf-eWg-nQY5ehTHUVsUE"
+genai.configure(api_key=GENAI_API_KEY)
+
+class HireAIAgent:
+    def __init__(self):
+        self.model = genai.GenerativeModel('gemini-1.5-flash')
+
+    def predict_role(self, resume_text):
+        try:
+            prompt = f"Analyze this resume snippet and determine the primary job role. Reply strictly with just the job title in 1 to 4 words maximum.\n\nResume Snippet: {resume_text[:1500]}"
+            response = self.model.generate_content(prompt)
+            return response.text.strip()
+        except Exception as e:
+            return "Professional"
+
+    def process_candidate(self, role, required_skills, resume_text, score, is_selected):
+        try:
+            analysis_prompt = f"Analyze this candidate for '{role}'. Required Skills: {required_skills}. Resume: {resume_text[:1500]}. Match Score: {score}%. Identify 1 good skill they have, and 1 missing skill. Keep it to 2 short sentences."
+            analysis_notes = self.model.generate_content(analysis_prompt).text
+
+            if is_selected:
+                email_prompt = f"Write a warm 3-line email to a candidate SHORTLISTED for '{role}'. Incorporate these insights: {analysis_notes}. Tell them HR will contact them soon. No placeholders."
+            else:
+                email_prompt = f"Write a polite, constructive 3-line rejection email for '{role}'. Tell them WHY they were not selected using these insights: {analysis_notes}. Encourage upskilling. No placeholders."
+            
+            return self.model.generate_content(email_prompt).text.strip()
+        except Exception as e:
+            if is_selected:
+                return f"Hello,\n\nYour resume matched {score}% for the '{role}' role. You are officially shortlisted and HR will contact you shortly.\n\nBest regards,\nH.I.R.E. AI"
+            else:
+                return f"Hello,\n\nYour match score ({score}%) for '{role}' didn't meet the threshold this time. Keep learning and try again!\n\nBest regards,\nH.I.R.E. AI"
+
+ai_agent = HireAIAgent()
 model = SentenceTransformer('all-MiniLM-L6-v2')
-
-# 2. Load Custom TensorFlow Model (For Role Prediction)
-try:
-    # compile=False prevents the watchdog crash!
-    tf_model = tf.keras.models.load_model('resume_classifier.h5', compile=False)
-    with open('tokenizer.pickle', 'rb') as handle:
-        tf_tokenizer = pickle.load(handle)
-    print("✅ Custom TensorFlow Brain Loaded!")
-except Exception as e:
-    print("⚠️ TF Model not found. Run train_tf_model.py first.")
-    tf_model, tf_tokenizer = None, None
-
-role_names = {0: "AI/ML Specialist", 1: "Database/Backend Admin", 2: "Web Developer"}
 
 # --- CONFIG ---
 SENDER_EMAIL = "nathirvkp@gmail.com" 
 SENDER_PASSWORD = "vnmgsjrpubpgqdrb" 
 LOG_FILE = "system_logs.json"
+IMAP_LOG_FILE = "imap_history.json" 
 
 def get_db():
     conn = sqlite3.connect('portal.db')
@@ -45,7 +62,7 @@ def get_db():
 
 def init_db():
     conn = get_db()
-    conn.execute('CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, name TEXT, email TEXT UNIQUE, role TEXT, password TEXT)')
+    conn.execute('CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, name TEXT, email TEXT UNIQUE, role TEXT, password TEXT, company TEXT)')
     conn.execute('CREATE TABLE IF NOT EXISTS jobs (id INTEGER PRIMARY KEY, title TEXT, skills TEXT, company TEXT, hr_email TEXT)')
     conn.commit(); conn.close()
 
@@ -60,10 +77,11 @@ clean_ghost_jobs()
 def log_activity(user_email, role, action, details=""):
     entry = {"timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "email": user_email, "role": role, "action": action, "details": details}
     try:
-        with open(LOG_FILE, 'r') as f: logs = json.load(f)
+        # 🐛 FIX: Added encoding='utf-8' and errors='ignore'
+        with open(LOG_FILE, 'r', encoding='utf-8', errors='ignore') as f: logs = json.load(f)
     except: logs = []
     logs.append(entry)
-    with open(LOG_FILE, 'w') as f: json.dump(logs, f, indent=4)
+    with open(LOG_FILE, 'w', encoding='utf-8') as f: json.dump(logs, f, indent=4)
 
 def extract_clean_text(file_stream):
     try:
@@ -84,19 +102,11 @@ def detect_fake_resume(text):
     if counts and counts.most_common(1)[0][1] > 40: flags.append(f"Spam ('{counts.most_common(1)[0][0]}')")
     return (True, " | ".join(flags)) if flags else (False, "Authentic")
 
-def predict_job_role(text):
-    if not tf_model or not tf_tokenizer: return "Unknown Role"
-    seq = tf_tokenizer.texts_to_sequences([text])
-    pad_seq = pad_sequences(seq, maxlen=30, padding='post')
-    prediction = tf_model.predict(pad_seq)
-    class_index = np.argmax(prediction[0])
-    return role_names.get(class_index, "Unknown Role")
-
 def send_mail(to_email, subject, body, attachment=None, filename="resume.pdf"):
     try:
         msg = MIMEMultipart()
         msg['Subject'], msg['From'], msg['To'] = subject, SENDER_EMAIL, to_email
-        msg.attach(MIMEText(body, 'plain'))
+        msg.attach(MIMEText(body, 'plain', 'utf-8')) # 🐛 FIX: Force utf-8 email body
         if attachment:
             attachment.seek(0)
             part = MIMEApplication(attachment.read(), Name=filename)
@@ -106,12 +116,113 @@ def send_mail(to_email, subject, body, attachment=None, filename="resume.pdf"):
             s.login(SENDER_EMAIL, SENDER_PASSWORD)
             s.sendmail(SENDER_EMAIL, to_email, msg.as_string())
         return True
-    except Exception as e: print(e); return False
+    except Exception as e: print(f"Email Error: {e}"); return False
 
-# --- BACKGROUND THREAD WORKER ---
 def send_mail_async(to_email, subject, body, attachment_data, filename):
     attachment_stream = io.BytesIO(attachment_data)
     send_mail(to_email, subject, body, attachment_stream, filename)
+
+def run_imap_core():
+    try:
+        mail = imaplib.IMAP4_SSL('imap.gmail.com')
+        mail.login(SENDER_EMAIL, SENDER_PASSWORD)
+        mail.select('inbox')
+        status, messages = mail.search(None, '(UNSEEN)')
+        if not messages[0]: return []
+        
+        processed_list = []
+        conn = get_db()
+        jobs = {str(j['id']): dict(j) for j in conn.execute('SELECT * FROM jobs').fetchall()}
+        conn.close()
+
+        for num in messages[0].split():
+            _, data = mail.fetch(num, '(RFC822)')
+            msg = email.message_from_bytes(data[0][1])
+            
+            subj_data, encoding = decode_header(msg['Subject'])[0]
+            if isinstance(subj_data, bytes):
+                subj = subj_data.decode(encoding if encoding else 'utf-8', errors='ignore')
+            else:
+                subj = str(subj_data)
+            
+            match = re.search(r'JOB\s*-\s*(\d+)', subj.upper())
+            if not match: continue
+            job_id = match.group(1)
+            if job_id not in jobs: continue
+            
+            target_job = jobs[job_id]
+            
+            for part in msg.walk():
+                if part.get_filename() and part.get_filename().endswith('.pdf'):
+                    pdf_bytes = part.get_payload(decode=True)
+                    text, s_email = extract_clean_text(io.BytesIO(pdf_bytes))
+                    
+                    if not text: continue
+                    is_fake, _ = detect_fake_resume(text)
+                    if is_fake: continue 
+                    
+                    # 🐛 FIX: Safe terminal printing to prevent CMD crash
+                    print(f"\n--- 🧠 AI VERIFICATION FOR: {s_email} ---")
+                    
+                    emb = model.encode([target_job['skills'], text])
+                    score = round(float(cosine_similarity([emb[0]], emb[1:])[0][0])*100, 2)
+                    
+                    print(f"✅ Final Match Score: {score}%\n----------------------------------")
+                    
+                    if s_email:
+                        is_selected = score > 40
+                        if is_selected:
+                            send_mail(target_job['hr_email'], f"H.I.R.E Auto-Match: {target_job['title']}", f"AI auto-routed a resume from email. Score: {score}%", io.BytesIO(pdf_bytes), part.get_filename())
+                            processed_list.append({
+                                "email": s_email,
+                                "job": target_job['title'],
+                                "score": f"{score}%",
+                                "timestamp": datetime.now().strftime("%I:%M %p")
+                            })
+                            
+                        cand_subj = f"Application Update: {target_job['title']}"
+                        cand_body = ai_agent.process_candidate(target_job['title'], target_job['skills'], text, score, is_selected)
+                        threading.Thread(target=send_mail, args=(s_email, cand_subj, cand_body)).start()
+
+        mail.close(); mail.logout()
+        
+        if processed_list:
+            try:
+                # 🐛 FIX: Safe JSON writing
+                with open(IMAP_LOG_FILE, 'r', encoding='utf-8', errors='ignore') as f: history = json.load(f)
+            except: history = []
+            history.extend(processed_list)
+            with open(IMAP_LOG_FILE, 'w', encoding='utf-8') as f: json.dump(history, f, indent=4)
+            log_activity(SENDER_EMAIL, "ADMIN", "Auto-IMAP Synced", f"Routed {len(processed_list)} resumes")
+        
+        return processed_list
+    except Exception as e:
+        print(f"IMAP Error: {e}")
+        return []
+
+def auto_imap_worker():
+    print("🚀 Auto-IMAP Engine Started! Checking emails every 10 seconds...")
+    while True:
+        try: run_imap_core()
+        except: pass
+        time.sleep(10)
+
+threading.Thread(target=auto_imap_worker, daemon=True).start()
+
+@app.route('/sync_inbox')
+def sync_inbox():
+    if session.get('email') != SENDER_EMAIL: return jsonify({"status": "Unauthorized"})
+    new_resumes = run_imap_core()
+    if new_resumes: return jsonify({"status": f"Successfully processed {len(new_resumes)} new resumes!"})
+    return jsonify({"status": "Inbox checked. No new matching resumes found at this moment."})
+
+@app.route('/get_imap_history')
+def get_imap_history():
+    try:
+        # 🐛 FIX: Safe JSON reading for frontend
+        with open(IMAP_LOG_FILE, 'r', encoding='utf-8', errors='ignore') as f: history = json.load(f)
+        return jsonify(history[::-1]) 
+    except: return jsonify([])
 
 @app.route('/')
 def home(): return render_template('front.html')
@@ -145,8 +256,10 @@ def register():
     d = request.json
     try:
         actual_role = "ADMIN" if d['email'] == SENDER_EMAIL else d['role']
+        company_name = d.get('company', 'N/A') 
         conn = get_db()
-        conn.execute('INSERT INTO users (name, email, role, password) VALUES (?,?,?,?)', (d['name'], d['email'], actual_role, d['pass']))
+        conn.execute('INSERT INTO users (name, email, role, password, company) VALUES (?,?,?,?,?)', 
+                     (d['name'], d['email'], actual_role, d['pass'], company_name))
         conn.commit(); conn.close()
         log_activity(d['email'], actual_role, "Account Created")
         return jsonify({"status": "Success"})
@@ -156,7 +269,9 @@ def register():
 def post_job():
     d = request.json
     conn = get_db()
-    conn.execute('INSERT INTO jobs (title, skills, company, hr_email) VALUES (?,?,?,?)', (d['title'], d['skills'], d['company'], session['email']))
+    hr_info = conn.execute('SELECT company FROM users WHERE email = ?', (session['email'],)).fetchone()
+    company_name = hr_info['company'] if hr_info else d['company']
+    conn.execute('INSERT INTO jobs (title, skills, company, hr_email) VALUES (?,?,?,?)', (d['title'], d['skills'], company_name, session['email']))
     conn.commit(); conn.close()
     log_activity(session['email'], "HR", "Posted Job", d['title'])
     return jsonify({"status": "Success"})
@@ -183,130 +298,56 @@ def get_public_jobs():
     conn.close()
     return jsonify([dict(row) for row in j])
 
-@app.route('/contact_hr', methods=['POST'])
-def contact_hr():
-    d = request.json
-    body = f"Message from Seeker ({session['email']}):\n\n{d['message']}"
-    send_mail(d['hr_email'], f"Inquiry for Job: {d['job_title']}", body)
-    log_activity(session['email'], "Seeker", "Contacted HR", d['hr_email'])
-    return jsonify({"status": "Sent"})
-
-# --- HR AI SCREENING (FIXED BUGS & NEW COMPANY EMAIL FEATURE) ---
 @app.route('/rank', methods=['POST'])
 def rank():
     role, jd = request.form.get('role'), request.form.get('jd')
     files = request.files.getlist('resumes')
-    
-    # Fetch the Company Name from the Database
     conn = get_db()
-    job_info = conn.execute('SELECT company FROM jobs WHERE hr_email = ? AND title = ?', (session['email'], role)).fetchone()
+    hr_info = conn.execute('SELECT company FROM users WHERE email = ?', (session['email'],)).fetchone()
     conn.close()
-    
-    company_name = job_info['company'] if job_info else "our organization"
+    company_name = hr_info['company'] if (hr_info and hr_info['company'] != 'N/A') else "our organization"
     
     resumes_data = []
     for f in files:
         t, s_email = extract_clean_text(f)
         if t: resumes_data.append({"name": f.filename, "text": t, "email": s_email})
-        
     if not resumes_data: return jsonify([])
     
     emb = model.encode([re.sub(r'[^a-zA-Z\s]', ' ', jd).lower()] + [r['text'] for r in resumes_data])
     scores = cosine_similarity([emb[0]], emb[1:])[0]
-    
     out = []
+    
     for i in range(len(resumes_data)):
         m, r = round(float(scores[i])*100, 2), resumes_data[i]
         is_fake, reason = detect_fake_resume(r['text'])
         
         if is_fake: status, score_disp = f"🚩 Fake: {reason}", "N/A"
-        elif m > 40:
-            status, score_disp = "Shortlisted ✅", f"{m}%"
-            
-            # --- UPDATED: Perfect HR Professional Phrasing ---
+        else:
+            is_selected = m > 40
+            status = "Shortlisted ✅" if is_selected else "Rejected"
+            score_disp = f"{m}%"
             if r['email']: 
-                subject = f"Interview Shortlist: {role} at {company_name}"
-                body = (f"Hello,\n\n"
-                        f"Congratulations! Your resume has been successfully screened by our AI Engine.\n\n"
-                        f"You have been officially shortlisted for the interview for the '{role}' position at {company_name}.\n"
-                        f"🎯 AI Match Score: {m}%\n\n"
-                        f"The HR team ({session['email']}) will contact you shortly to schedule your interview.\n\n"
-                        f"Best regards,\nH.I.R.E. Automated Recruitment System")
-                
-                # Send email in the background instantly
+                subject = f"Interview Status: {role} at {company_name}"
+                body = ai_agent.process_candidate(role, jd, r['text'], m, is_selected)
                 threading.Thread(target=send_mail, args=(r['email'], subject, body)).start()
-                
-        else: status, score_disp = "Rejected", f"{m}%"
-            
         out.append({"name": r['name'], "score": score_disp, "status": status})
     
     log_activity(session['email'], "HR", "Ran AI Screening", f"Processed {len(resumes_data)} resumes")
     return jsonify(sorted(out, key=lambda x: str(x['score']), reverse=True))
 
-@app.route('/sync_inbox')
-def sync_inbox():
-    if session.get('email') != SENDER_EMAIL: return jsonify({"status": "Unauthorized"})
-    try:
-        mail = imaplib.IMAP4_SSL('imap.gmail.com')
-        mail.login(SENDER_EMAIL, SENDER_PASSWORD)
-        mail.select('inbox')
-        status, messages = mail.search(None, '(UNSEEN)')
-        processed = 0
-        
-        conn = get_db()
-        jobs = {str(j['id']): dict(j) for j in conn.execute('SELECT * FROM jobs').fetchall()}
-        conn.close()
-
-        for num in messages[0].split():
-            _, data = mail.fetch(num, '(RFC822)')
-            msg = email.message_from_bytes(data[0][1])
-            subj = decode_header(msg['Subject'])[0][0]
-            if isinstance(subj, bytes): subj = subj.decode()
-            
-            match = re.search(r'JOB-(\d+)', str(subj).upper())
-            if not match: continue
-            job_id = match.group(1)
-            if job_id not in jobs: continue
-            
-            target_job = jobs[job_id]
-            
-            for part in msg.walk():
-                if part.get_filename() and part.get_filename().endswith('.pdf'):
-                    import io
-                    pdf_bytes = part.get_payload(decode=True)
-                    text, s_email = extract_clean_text(io.BytesIO(pdf_bytes))
-                    
-                    if not text: continue
-                    is_fake, _ = detect_fake_resume(text)
-                    if is_fake: continue 
-                    
-                    emb = model.encode([target_job['skills'], text])
-                    score = round(float(cosine_similarity([emb[0]], emb[1:])[0][0])*100, 2)
-                    
-                    if score > 40:
-                        send_mail(target_job['hr_email'], f"H.I.R.E Auto-Match: {target_job['title']}", f"AI auto-routed a resume from email. Score: {score}%", io.BytesIO(pdf_bytes), part.get_filename())
-                        processed += 1
-        mail.close(); mail.logout()
-        log_activity(SENDER_EMAIL, "ADMIN", "Inbox Synced", f"Auto-routed {processed} resumes")
-        return jsonify({"status": f"Successfully processed and routed {processed} new email resumes!"})
-    except Exception as e: return jsonify({"status": f"Error: {str(e)}"})
-
 @app.route('/recommend', methods=['POST'])
 def recommend():
     name = session.get('name')
     file = request.files.get('resume')
-    
-    # Read file instantly for background threads
     file_bytes = file.read()
-    file_stream = io.BytesIO(file_bytes)
+    txt, _ = extract_clean_text(io.BytesIO(file_bytes))
     
-    txt, _ = extract_clean_text(file_stream)
-    tf_prediction = predict_job_role(txt)
-    
+    ai_prediction = ai_agent.predict_role(txt)
     conn = get_db()
     jobs = conn.execute('SELECT * FROM jobs WHERE hr_email IN (SELECT email FROM users WHERE role = "HR")').fetchall()
     conn.close()
-    if not jobs: return jsonify({"predicted_role": tf_prediction, "matches": []})
+    
+    if not jobs: return jsonify({"predicted_role": ai_prediction, "matches": []})
     
     job_skills = [j['skills'] for j in jobs]
     emb = model.encode([txt] + job_skills)
@@ -317,34 +358,19 @@ def recommend():
         val = round(s*100, 2)
         if val > 40: 
             subject = f"H.I.R.E. AI Auto-Screened: {jobs[i]['title']}"
-            body = (f"Hello HR,\n\n"
-                    f"The H.I.R.E. AI Ecosystem has automatically screened and routed a top candidate to you!\n\n"
-                    f"👤 Candidate Name: {name}\n"
-                    f"🎯 Skill Match Score: {val}%\n"
-                    f"🧠 Neural Net Classification: {tf_prediction}\n\n"
-                    f"Please find the analyzed resume attached for your review.")
-            
-            # Fire and forget! Send email in the background.
-            threading.Thread(
-                target=send_mail_async, 
-                args=(jobs[i]['hr_email'], subject, body, file_bytes, file.filename)
-            ).start()
-            
+            body = f"Hello HR,\n\nThe H.I.R.E. AI Ecosystem has routed a top candidate!\n👤 Candidate: {name}\n🎯 Match: {val}%\n🧠 AI Classification: {ai_prediction}\n\nReview the attached resume."
+            threading.Thread(target=send_mail_async, args=(jobs[i]['hr_email'], subject, body, file_bytes, file.filename)).start()
         res.append({"title": jobs[i]['title'], "company": jobs[i]['company'], "score": f"{val}%"})
         
-    sorted_matches = sorted(res, key=lambda x: float(x['score'].strip('%')), reverse=True)
-    return jsonify({"predicted_role": tf_prediction, "matches": sorted_matches})
+    return jsonify({"predicted_role": ai_prediction, "matches": sorted(res, key=lambda x: float(x['score'].strip('%')), reverse=True)})
 
 @app.route('/delete_account', methods=['POST'])
 def delete_account():
     user_id = session.get('user_id')
     hr_email = session.get('email')
     if not user_id: return jsonify({"status": "Unauthorized"})
-    
     conn = get_db()
-    if session.get('role') == 'HR':
-        conn.execute('DELETE FROM jobs WHERE hr_email = ?', (hr_email,))
-        
+    if session.get('role') == 'HR': conn.execute('DELETE FROM jobs WHERE hr_email = ?', (hr_email,))
     conn.execute('DELETE FROM users WHERE id = ?', (user_id,))
     conn.commit(); conn.close()
     session.clear()
@@ -356,11 +382,12 @@ def admin_page(): return render_template('admin.html')
 @app.route('/api/god_view')
 def api_god_view():
     conn = get_db()
-    u = conn.execute('SELECT id, name, email, role FROM users').fetchall()
+    u = conn.execute('SELECT id, name, email, role, company FROM users').fetchall()
     j = conn.execute('SELECT * FROM jobs').fetchall()
     conn.close()
     try:
-        with open(LOG_FILE, 'r') as f: l = json.load(f)
+        # 🐛 FIX: Safe JSON reading for Admin Logs
+        with open(LOG_FILE, 'r', encoding='utf-8', errors='ignore') as f: l = json.load(f)
     except: l = []
     return jsonify({"users": [dict(x) for x in u], "jobs": [dict(x) for x in j], "logs": l[::-1]}) 
 

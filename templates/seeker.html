@@ -1,90 +1,117 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>H.I.R.E. - Seeker Portal</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>H.I.R.E. | Candidate Portal</title>
     <style>
-        body { background: #0b1426; color: white; font-family: 'Poppins', sans-serif; display: flex; flex-direction: column; align-items: center; padding: 40px; margin: 0; }
-        .glass { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); padding: 40px; border-radius: 20px; width: 80%; border: 1px solid rgba(255, 255, 255, 0.1); box-sizing: border-box; }
-        .top-nav { display: flex; justify-content: space-between; width: 80%; margin-bottom: 20px; align-items: center; }
-        .top-nav a, .top-nav button { color: #a1a6b4; text-decoration: none; font-weight: bold; background: none; border: none; cursor: pointer; font-size: 15px; }
-        .top-nav a:hover, .top-nav button:hover { color: #ff4b4b; }
-        .brand { font-size: 32px; font-weight: bold; background: linear-gradient(45deg, #00c6ff, #0072ff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .job-card { background: rgba(255,255,255,0.08); padding: 15px; border-radius: 10px; margin-top: 15px; border-left: 4px solid #00c6ff; display: flex; justify-content: space-between; align-items: center; }
-        .up-btn { background: linear-gradient(45deg, #00c6ff, #0072ff); padding: 12px 25px; border-radius: 30px; cursor: pointer; font-weight: bold; display: inline-block; margin-top: 15px; border: none; color: white; transition: 0.3s; }
-        .up-btn:hover { transform: scale(1.02); box-shadow: 0 0 15px #00c6ff; }
-        .msg-btn { background: rgba(0, 198, 255, 0.1); border: 1px solid #00c6ff; padding: 8px 15px; border-radius: 8px; color: #00c6ff; cursor: pointer; font-weight: bold; transition: 0.3s; }
-        .msg-btn:hover { background: #00c6ff; color: #0b1426; box-shadow: 0 0 10px #00c6ff; }
+        body { margin: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #0b1121; color: white; display: flex; height: 100vh; }
+        .sidebar { width: 260px; background: #0f172a; padding: 30px 20px; border-right: 1px solid #1f2d4a; display: flex; flex-direction: column; }
+        .main-content { flex-grow: 1; padding: 40px; overflow-y: auto; }
+        .brand-title { font-size: 32px; font-weight: bold; color: #00e5ff; margin: 0; }
+        .brand-sub { color: #94a3b8; font-size: 14px; margin-bottom: 40px; }
+        .logout-btn { margin-top: auto; color: #ff4b4b; text-decoration: none; font-weight: bold; font-size: 16px; transition: 0.3s; }
+        .logout-btn:hover { color: #ff1c1c; }
+        .upload-box { background: #131c31; border: 2px dashed #00e5ff; padding: 40px; text-align: center; border-radius: 10px; margin-bottom: 20px; }
+        .btn { background: #00e5ff; color: #000; border: none; padding: 12px 25px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 16px; margin-top: 15px; }
+        .btn:hover { box-shadow: 0 0 15px rgba(0, 229, 255, 0.5); }
+        .notif-box { background: #1e293b; padding: 20px; border-radius: 10px; margin-bottom: 25px; border-left: 5px solid #00e676; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; background: #131c31; border-radius: 10px; overflow: hidden; }
+        th, td { padding: 15px; text-align: left; border-bottom: 1px solid #1f2d4a; }
+        th { color: #00e5ff; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
-<body onload="loadJobs()">
-    <div class="top-nav">
-        <div style="display: flex; gap: 20px;"><a href="/logout">← Logout</a><button onclick="delAccount()">🗑️ Delete Account</button></div>
-        <div class="brand">H.I.R.E.</div>
-    </div>
-    
-    <div class="glass" style="margin-bottom: 20px;">
-        <h3 style="color: #00ff88; margin-top:0;">🔥 Live Ecosystem Openings</h3>
-        <p style="color: #a1a6b4; font-size: 14px;">Want to auto-apply? Send your resume to <b style="color:white;">nathirvkp@gmail.com</b> with the <b>Subject ID</b> (e.g., "JOB-5"). Our AI will handle the rest!</p>
-        <div id="liveJobs"></div>
+<body>
+
+    <div class="sidebar">
+        <h1 class="brand-title">H.I.R.E.</h1>
+        <p class="brand-sub">Candidate Workspace</p>
+        <p style="color: #cbd5e1;">Welcome to the portal. Upload your resume to find your perfect match.</p>
+        <a href="/logout" class="logout-btn">← Terminate Session</a>
     </div>
 
-    <div class="glass">
-        <h3>Smart AI Matcher</h3>
-        <p style="color: #a1a6b4; font-size: 14px;">Upload your resume here. Match >40% and we will automatically route it to the HR.</p>
-        <label for="f" class="up-btn">📂 Choose Resume (PDF)</label>
-        <input type="file" id="f" accept=".pdf" style="display:none;" onchange="document.getElementById('fn').innerText = 'Selected: ' + this.files[0].name">
-        <p id="fn" style="color: #00ff88; font-size: 13px; font-weight: bold; margin-top: 10px;"></p>
-        <button class="up-btn" style="background:linear-gradient(45deg, #ff416c, #ff4b2b);" onclick="getRecs()">Analyze Skills & Apply</button>
-        <div id="recs" style="margin-top: 20px;"></div>
+    <div class="main-content">
+        <div class="notif-box">
+            <h3 style="margin: 0 0 15px 0; color: #00e676; display: flex; align-items: center;">
+                <span style="font-size: 22px; margin-right: 10px;">🔔</span> Live Job Alerts
+            </h3>
+            <div id="notification-list">
+                <p style="color: #94a3b8; font-size: 14px;">Scanning for new opportunities...</p>
+            </div>
+        </div>
+
+        <h2 style="margin-top: 0;">Upload Resume for AI Matching</h2>
+        <div class="upload-box">
+            <input type="file" id="resumeFile" accept=".pdf" style="color: white; font-size: 16px;">
+            <br>
+            <button class="btn" onclick="applySmart()">Analyze Skills & Match</button>
+            <p id="apply-status" style="color: #00e676; margin-top: 15px; font-weight: bold;"></p>
+        </div>
+
+        <h3 style="color: #00e5ff; margin-top: 30px;">Live Ecosystem Openings</h3>
+        <table>
+            <thead><tr><th>Job Title</th><th>Company</th><th>Required Skills</th></tr></thead>
+            <tbody id="public-jobs"></tbody>
+        </table>
     </div>
 
     <script>
-        async function loadJobs() {
-            const r = await fetch('/get_public_jobs'); const jobs = await r.json(); const b = document.getElementById('liveJobs');
-            b.innerHTML = jobs.length === 0 ? "<p style='color:#a1a6b4;'>No active openings found at the moment.</p>" : "";
-            jobs.forEach(j => { b.innerHTML += `<div class="job-card"><div><b style="color:#00c6ff; font-size:18px;">${j.title}</b><br><small>${j.company} | Subject ID: <span style="color:#00ff88;">JOB-${j.id}</span></small></div>
-            <button class="msg-btn" onclick="msgHR('${j.hr_email}', '${j.title}')">✉️ Message HR</button></div>`; });
+        // 1. Fetch Live Notifications (Auto-updates every 10 seconds!)
+        function fetchJobNotifications() {
+            fetch('/get_public_jobs')
+            .then(res => res.json())
+            .then(data => {
+                let notifBox = document.getElementById('notification-list');
+                let tbody = document.getElementById('public-jobs');
+                notifBox.innerHTML = ''; tbody.innerHTML = '';
+                
+                if(data.length === 0) {
+                    notifBox.innerHTML = '<p style="color: #94a3b8; font-size: 14px;">No new alerts at the moment.</p>';
+                    return;
+                }
+
+                // Show Top 2 newest jobs in Notification Box
+                let latestJobs = [...data].reverse().slice(0, 2); 
+                latestJobs.forEach(job => {
+                    notifBox.innerHTML += `
+                        <div style="background: rgba(0, 230, 118, 0.1); padding: 12px; margin-bottom: 10px; border-radius: 8px; border: 1px solid rgba(0,230,118,0.2); animation: fadeIn 0.5s;">
+                            <b style="color: #fff;">🚀 New Vacancy Alert!</b><br>
+                            <span style="color: #cbd5e1; font-size: 14px;">
+                                <b>${job.company}</b> is urgently hiring a <span style="color: #00e5ff; font-weight: bold;">${job.title}</span>.
+                            </span>
+                        </div>`;
+                });
+
+                // Populate the Main Job Table
+                data.forEach(job => {
+                    tbody.innerHTML += `<tr><td style="font-weight:bold;">${job.title}</td><td>${job.company}</td><td>${job.skills}</td></tr>`;
+                });
+            });
         }
-        async function msgHR(email, title) {
-            const msg = prompt(`Send a direct message to the HR for ${title}:`); if(!msg) return;
-            await fetch('/contact_hr', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({hr_email: email, job_title: title, message: msg})});
-            alert("Message sent securely to HR via Email!");
+
+        // 2. Upload Resume Logic
+        function applySmart() {
+            let fileInput = document.getElementById('resumeFile');
+            if(fileInput.files.length === 0) { alert("Please select a PDF resume first!"); return; }
+            
+            let statusText = document.getElementById('apply-status');
+            statusText.style.color = "#00e5ff";
+            statusText.innerText = "🧠 AI is analyzing your resume... Please wait.";
+            
+            let fd = new FormData();
+            fd.append('resume', fileInput.files[0]);
+            
+            fetch('/recommend', { method: 'POST', body: fd })
+            .then(res => res.json())
+            .then(data => {
+                statusText.style.color = "#00e676";
+                statusText.innerHTML = `✅ Analysis Complete! Your AI Predicted Role: <b style="color:white;">${data.predicted_role}</b><br>Your profile has been routed to matching HRs.`;
+            });
         }
-        async function getRecs() {
-            const f = document.getElementById('f'); if(f.files.length === 0) return alert("Please select a PDF!");
-            const fd = new FormData(); fd.append('resume', f.files[0]);
-            document.getElementById('recs').innerHTML = "<h4 style='color:#00c6ff;'>Analyzing inside the Ecosystem...</h4>";
-            const r = await fetch('/recommend', { method: 'POST', body: fd }); const d = await r.json();
-            document.getElementById('recs').innerHTML = "<h4>Match Results:</h4>" + d.map(x => `<div class="job-card"><b>${x.title}</b><b style="color:#00ff88;">${x.score} Match</b></div>`).join('');
-        }
-        async function delAccount() { if(confirm("⚠️ Warning: Delete your account permanently?")) { await fetch('/delete_account', { method: 'POST' }); window.location.href = '/'; } }
-        async function getRecs() {
-            const f = document.getElementById('f'); 
-            if(f.files.length === 0) return alert("Please select a PDF!");
-            const fd = new FormData(); fd.append('resume', f.files[0]);
-            
-            document.getElementById('recs').innerHTML = "<h4 style='color:#00c6ff;'>🧠 TensorFlow Neural Net Processing...</h4>";
-            
-            const r = await fetch('/recommend', { method: 'POST', body: fd }); 
-            const d = await r.json();
-            
-            // Display the TensorFlow Prediction
-            let htmlContent = `<div style="background: rgba(0, 255, 136, 0.1); border-left: 4px solid #00ff88; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-                <h3 style="margin:0; color: #00ff88;">🤖 AI Neural Net Prediction</h3>
-                <p style="margin: 5px 0 0 0; color: white;">Based on your skills, our deep learning model classifies you as a: <b style="font-size:18px;">${d.predicted_role}</b></p>
-            </div>`;
-            
-            htmlContent += "<h4>Match Results with Live Jobs:</h4>";
-            
-            // Display the regular job matches
-            if(d.matches.length === 0) {
-                htmlContent += "<p>No specific jobs found matching your profile right now.</p>";
-            } else {
-                htmlContent += d.matches.map(x => `<div class="job-card"><b>${x.title}</b><b style="color:#00ff88;">${x.score} Match</b></div>`).join('');
-            }
-            
-            document.getElementById('recs').innerHTML = htmlContent;
-        }
+
+        window.onload = fetchJobNotifications;
+        setInterval(fetchJobNotifications, 10000); // Auto refresh the alerts
     </script>
 </body>
 </html>
