@@ -66,18 +66,11 @@ def init_db():
     conn.execute('CREATE TABLE IF NOT EXISTS jobs (id INTEGER PRIMARY KEY, title TEXT, skills TEXT, company TEXT, hr_email TEXT)')
     conn.commit(); conn.close()
 
-def clean_ghost_jobs():
-    conn = get_db()
-    conn.execute('DELETE FROM jobs WHERE hr_email NOT IN (SELECT email FROM users WHERE role = "HR")')
-    conn.commit(); conn.close()
-
 init_db()
-clean_ghost_jobs()
 
 def log_activity(user_email, role, action, details=""):
     entry = {"timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "email": user_email, "role": role, "action": action, "details": details}
     try:
-        # 🐛 FIX: Added encoding='utf-8' and errors='ignore'
         with open(LOG_FILE, 'r', encoding='utf-8', errors='ignore') as f: logs = json.load(f)
     except: logs = []
     logs.append(entry)
@@ -106,7 +99,7 @@ def send_mail(to_email, subject, body, attachment=None, filename="resume.pdf"):
     try:
         msg = MIMEMultipart()
         msg['Subject'], msg['From'], msg['To'] = subject, SENDER_EMAIL, to_email
-        msg.attach(MIMEText(body, 'plain', 'utf-8')) # 🐛 FIX: Force utf-8 email body
+        msg.attach(MIMEText(body, 'plain', 'utf-8'))
         if attachment:
             attachment.seek(0)
             part = MIMEApplication(attachment.read(), Name=filename)
@@ -122,6 +115,7 @@ def send_mail_async(to_email, subject, body, attachment_data, filename):
     attachment_stream = io.BytesIO(attachment_data)
     send_mail(to_email, subject, body, attachment_stream, filename)
 
+# --- 🚀 ADVANCED IMAP AUTOMATION CORE ---
 def run_imap_core():
     try:
         mail = imaplib.IMAP4_SSL('imap.gmail.com')
@@ -161,8 +155,7 @@ def run_imap_core():
                     is_fake, _ = detect_fake_resume(text)
                     if is_fake: continue 
                     
-                    # 🐛 FIX: Safe terminal printing to prevent CMD crash
-                    print(f"\n--- 🧠 AI VERIFICATION FOR: {s_email} ---")
+                    print(f"\n--- 🧠 ZERO-TOUCH AI VERIFICATION FOR: {s_email} ---")
                     
                     emb = model.encode([target_job['skills'], text])
                     score = round(float(cosine_similarity([emb[0]], emb[1:])[0][0])*100, 2)
@@ -188,25 +181,30 @@ def run_imap_core():
         
         if processed_list:
             try:
-                # 🐛 FIX: Safe JSON writing
                 with open(IMAP_LOG_FILE, 'r', encoding='utf-8', errors='ignore') as f: history = json.load(f)
             except: history = []
             history.extend(processed_list)
             with open(IMAP_LOG_FILE, 'w', encoding='utf-8') as f: json.dump(history, f, indent=4)
-            log_activity(SENDER_EMAIL, "ADMIN", "Auto-IMAP Synced", f"Routed {len(processed_list)} resumes")
+            log_activity(SENDER_EMAIL, "ADMIN", "Zero-Touch Sync", f"Routed {len(processed_list)} resumes automatically")
         
         return processed_list
     except Exception as e:
         print(f"IMAP Error: {e}")
         return []
 
+# --- 🤖 THE NEVER-SLEEPING BACKGROUND THREAD ---
 def auto_imap_worker():
-    print("🚀 Auto-IMAP Engine Started! Checking emails every 10 seconds...")
+    print("🚀 BACKGROUND ENGINE: Zero-Touch IMAP Automation Started! (Checking every 10s)")
     while True:
-        try: run_imap_core()
-        except: pass
-        time.sleep(10)
+        try: 
+            processed = run_imap_core()
+            if processed:
+                print(f"📥 BACKGROUND ENGINE: Successfully processed {len(processed)} new resumes!")
+        except Exception as e: 
+            print(f"⚠️ BACKGROUND ENGINE ERROR: {e}")
+        time.sleep(10) # Checks exactly every 10 seconds
 
+# Boot the thread immediately
 threading.Thread(target=auto_imap_worker, daemon=True).start()
 
 @app.route('/sync_inbox')
@@ -219,7 +217,6 @@ def sync_inbox():
 @app.route('/get_imap_history')
 def get_imap_history():
     try:
-        # 🐛 FIX: Safe JSON reading for frontend
         with open(IMAP_LOG_FILE, 'r', encoding='utf-8', errors='ignore') as f: history = json.load(f)
         return jsonify(history[::-1]) 
     except: return jsonify([])
@@ -294,7 +291,8 @@ def get_my_jobs():
 @app.route('/get_public_jobs')
 def get_public_jobs():
     conn = get_db()
-    j = conn.execute('SELECT * FROM jobs WHERE hr_email IN (SELECT email FROM users WHERE role = "HR")').fetchall()
+    # 🚀 We fetch the ID so the Seeker UI can show "JOB-X"
+    j = conn.execute('SELECT id, title, skills, company FROM jobs WHERE hr_email IN (SELECT email FROM users WHERE role = "HR")').fetchall()
     conn.close()
     return jsonify([dict(row) for row in j])
 
@@ -386,7 +384,6 @@ def api_god_view():
     j = conn.execute('SELECT * FROM jobs').fetchall()
     conn.close()
     try:
-        # 🐛 FIX: Safe JSON reading for Admin Logs
         with open(LOG_FILE, 'r', encoding='utf-8', errors='ignore') as f: l = json.load(f)
     except: l = []
     return jsonify({"users": [dict(x) for x in u], "jobs": [dict(x) for x in j], "logs": l[::-1]}) 

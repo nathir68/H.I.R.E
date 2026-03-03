@@ -12,13 +12,41 @@
         .brand-sub { color: #94a3b8; font-size: 14px; margin-bottom: 40px; }
         .logout-btn { margin-top: auto; color: #ff4b4b; text-decoration: none; font-weight: bold; font-size: 16px; transition: 0.3s; }
         .logout-btn:hover { color: #ff1c1c; }
-        .upload-box { background: #131c31; border: 2px dashed #00e5ff; padding: 40px; text-align: center; border-radius: 10px; margin-bottom: 20px; }
-        .btn { background: #00e5ff; color: #000; border: none; padding: 12px 25px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 16px; margin-top: 15px; }
-        .btn:hover { box-shadow: 0 0 15px rgba(0, 229, 255, 0.5); }
+        
+        .upload-box { background: #131c31; border: 2px dashed #00e5ff; padding: 40px; text-align: center; border-radius: 10px; margin-bottom: 20px; transition: 0.3s; }
+        .upload-box:hover { background: #16223b; border-color: #00e676; }
+        
+        /* 🎨 THE NEW BEAUTIFUL FILE BUTTON STYLES */
+        .file-input-hidden { display: none; }
+        .custom-file-upload { 
+            display: inline-block; 
+            padding: 15px 30px; 
+            cursor: pointer; 
+            background: rgba(0, 229, 255, 0.1); 
+            color: #00e5ff; 
+            border: 2px solid #00e5ff; 
+            border-radius: 8px; 
+            font-size: 16px; 
+            font-weight: bold; 
+            transition: all 0.3s ease; 
+            margin-bottom: 10px;
+        }
+        .custom-file-upload:hover { 
+            background: #00e5ff; 
+            color: #000; 
+            box-shadow: 0 0 15px rgba(0, 229, 255, 0.5); 
+            transform: translateY(-2px);
+        }
+        .upload-icon { font-size: 22px; vertical-align: middle; margin-right: 8px; }
+
+        .btn { background: #00e676; color: #000; border: none; padding: 12px 25px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 16px; margin-top: 15px; transition: 0.3s;}
+        .btn:hover { box-shadow: 0 0 15px rgba(0, 230, 118, 0.5); transform: translateY(-2px); }
+        
         .notif-box { background: #1e293b; padding: 20px; border-radius: 10px; margin-bottom: 25px; border-left: 5px solid #00e676; }
         table { width: 100%; border-collapse: collapse; margin-top: 20px; background: #131c31; border-radius: 10px; overflow: hidden; }
         th, td { padding: 15px; text-align: left; border-bottom: 1px solid #1f2d4a; }
         th { color: #00e5ff; }
+        .email-badge { background: rgba(0,229,255,0.1); border: 1px solid #00e5ff; padding: 5px 10px; border-radius: 5px; font-size: 12px; display: inline-block; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
@@ -43,21 +71,54 @@
 
         <h2 style="margin-top: 0;">Upload Resume for AI Matching</h2>
         <div class="upload-box">
-            <input type="file" id="resumeFile" accept=".pdf" style="color: white; font-size: 16px;">
+            
+            <input type="file" id="resumeFile" class="file-input-hidden" accept=".pdf" onchange="updateFileName()">
+            
+            <label for="resumeFile" class="custom-file-upload" id="upload-label">
+                <span class="upload-icon">📄</span> <span id="file-name-display">Select your PDF Resume</span>
+            </label>
+            <p style="color: #64748b; font-size: 13px; margin-top: 0; margin-bottom: 25px;">Maximum file size: 5MB (.pdf only)</p>
+            
             <br>
-            <button class="btn" onclick="applySmart()">Analyze Skills & Match</button>
+            <button class="btn" onclick="applySmart()">🚀 Analyze Skills & Match</button>
             <p id="apply-status" style="color: #00e676; margin-top: 15px; font-weight: bold;"></p>
         </div>
 
         <h3 style="color: #00e5ff; margin-top: 30px;">Live Ecosystem Openings</h3>
         <table>
-            <thead><tr><th>Job Title</th><th>Company</th><th>Required Skills</th></tr></thead>
+            <thead>
+                <tr>
+                    <th>Job Title</th>
+                    <th>Company</th>
+                    <th>Required Skills</th>
+                    <th>Zero-Touch Apply Info</th>
+                </tr>
+            </thead>
             <tbody id="public-jobs"></tbody>
         </table>
     </div>
 
     <script>
-        // 1. Fetch Live Notifications (Auto-updates every 10 seconds!)
+        // --- 🎨 DYNAMIC FILE NAME DISPLAY ---
+        function updateFileName() {
+            let fileInput = document.getElementById('resumeFile');
+            let displaySpan = document.getElementById('file-name-display');
+            let label = document.getElementById('upload-label');
+            
+            if (fileInput.files.length > 0) {
+                displaySpan.innerText = fileInput.files[0].name;
+                label.style.borderColor = "#00e676"; // Change border to green
+                label.style.color = "#00e676";       // Change text to green
+                label.style.background = "rgba(0, 230, 118, 0.1)"; 
+            } else {
+                displaySpan.innerText = "Select your PDF Resume";
+                label.style.borderColor = "#00e5ff";
+                label.style.color = "#00e5ff";
+                label.style.background = "rgba(0, 229, 255, 0.1)";
+            }
+        }
+
+        // --- 🔔 LIVE NOTIFICATIONS ---
         function fetchJobNotifications() {
             fetch('/get_public_jobs')
             .then(res => res.json())
@@ -71,7 +132,6 @@
                     return;
                 }
 
-                // Show Top 2 newest jobs in Notification Box
                 let latestJobs = [...data].reverse().slice(0, 2); 
                 latestJobs.forEach(job => {
                     notifBox.innerHTML += `
@@ -83,14 +143,24 @@
                         </div>`;
                 });
 
-                // Populate the Main Job Table
                 data.forEach(job => {
-                    tbody.innerHTML += `<tr><td style="font-weight:bold;">${job.title}</td><td>${job.company}</td><td>${job.skills}</td></tr>`;
+                    tbody.innerHTML += `
+                        <tr>
+                            <td style="font-weight:bold;">${job.title}</td>
+                            <td>${job.company}</td>
+                            <td>${job.skills}</td>
+                            <td>
+                                <div class="email-badge">
+                                    Send Resume To: <b style="color:white;">nathirvkp@gmail.com</b><br>
+                                    Subject line: <b style="color:#00e676;">JOB-${job.id}</b>
+                                </div>
+                            </td>
+                        </tr>`;
                 });
             });
         }
 
-        // 2. Upload Resume Logic
+        // --- 🧠 AI RESUME UPLOAD LOGIC ---
         function applySmart() {
             let fileInput = document.getElementById('resumeFile');
             if(fileInput.files.length === 0) { alert("Please select a PDF resume first!"); return; }
@@ -111,7 +181,7 @@
         }
 
         window.onload = fetchJobNotifications;
-        setInterval(fetchJobNotifications, 10000); // Auto refresh the alerts
+        setInterval(fetchJobNotifications, 10000); 
     </script>
 </body>
 </html>

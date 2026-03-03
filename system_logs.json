@@ -47,5 +47,96 @@
         "role": "Seeker",
         "action": "Logout",
         "details": ""
+    },
+    {
+        "timestamp": "2026-03-03 15:57:30",
+        "email": "nathirvkp@gmail.com",
+        "role": "ADMIN",
+        "action": "Login Successful",
+        "details": ""
+    },
+    {
+        "timestamp": "2026-03-03 16:09:39",
+        "email": "nathirvkp@gmail.com",
+        "role": "ADMIN",
+        "action": "Logout",
+        "details": ""
+    },
+    {
+        "timestamp": "2026-03-03 16:10:43",
+        "email": "nandhiniraja2408@gmail.com",
+        "role": "HR",
+        "action": "Login Successful",
+        "details": ""
+    },
+    {
+        "timestamp": "2026-03-03 16:11:50",
+        "email": "nandhiniraja2408@gmail.com",
+        "role": "HR",
+        "action": "Posted Job",
+        "details": "Software Architect"
+    },
+    {
+        "timestamp": "2026-03-03 16:13:44",
+        "email": "nandhiniraja2408@gmail.com",
+        "role": "HR",
+        "action": "Logout",
+        "details": ""
+    },
+    {
+        "timestamp": "2026-03-03 16:13:50",
+        "email": "nathirvkp@gmail.com",
+        "role": "ADMIN",
+        "action": "Login Successful",
+        "details": ""
+    },
+    {
+        "timestamp": "2026-03-03 16:14:09",
+        "email": "nathirvkp@gmail.com",
+        "role": "ADMIN",
+        "action": "Auto-IMAP Synced",
+        "details": "Routed 1 resumes"
+    },
+    {
+        "timestamp": "2026-03-03 16:18:03",
+        "email": "nathirvkp@gmail.com",
+        "role": "ADMIN",
+        "action": "Logout",
+        "details": ""
+    },
+    {
+        "timestamp": "2026-03-03 16:20:30",
+        "email": "nandhiniraja2408@gmail.com",
+        "role": "HR",
+        "action": "Login Successful",
+        "details": ""
+    },
+    {
+        "timestamp": "2026-03-03 16:21:32",
+        "email": "nandhiniraja2408@gmail.com",
+        "role": "HR",
+        "action": "Logout",
+        "details": ""
+    },
+    {
+        "timestamp": "2026-03-03 16:21:42",
+        "email": "sahana080108@gmail.com",
+        "role": "Seeker",
+        "action": "Login Successful",
+        "details": ""
+    },
+    {
+        "timestamp": "2026-03-03 16:29:13",
+        "email": "sahana080108@gmail.com",
+        "role": "Seeker",
+        "action": "Login Successful",
+        "details": ""
+    },
+    {
+        "timestamp": "2026-03-03 16:29:43",
+        "email": "sahana080108@gmail.com",
+        "role": "Seeker",
+        "action": "Logout",
+        "details": ""
     }
 ]
