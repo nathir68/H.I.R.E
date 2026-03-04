@@ -117,12 +117,15 @@ def send_mail_async(to_email, subject, body, attachment_data, filename):
 
 # --- 🚀 ADVANCED IMAP AUTOMATION CORE ---
 def run_imap_core():
+    """Checks emails, processes resumes, and routes ONLY if score > 40%"""
     try:
         mail = imaplib.IMAP4_SSL('imap.gmail.com')
         mail.login(SENDER_EMAIL, SENDER_PASSWORD)
         mail.select('inbox')
+        
         status, messages = mail.search(None, '(UNSEEN)')
-        if not messages[0]: return []
+        if not messages[0]: 
+            return []
         
         processed_list = []
         conn = get_db()
@@ -140,9 +143,12 @@ def run_imap_core():
                 subj = str(subj_data)
             
             match = re.search(r'JOB\s*-\s*(\d+)', subj.upper())
-            if not match: continue
+            if not match: 
+                continue
             job_id = match.group(1)
-            if job_id not in jobs: continue
+            
+            if job_id not in jobs: 
+                continue
             
             target_job = jobs[job_id]
             
@@ -151,21 +157,30 @@ def run_imap_core():
                     pdf_bytes = part.get_payload(decode=True)
                     text, s_email = extract_clean_text(io.BytesIO(pdf_bytes))
                     
-                    if not text: continue
+                    if not text: 
+                        continue
+                        
                     is_fake, _ = detect_fake_resume(text)
-                    if is_fake: continue 
+                    if is_fake: 
+                        continue 
                     
                     print(f"\n--- 🧠 ZERO-TOUCH AI VERIFICATION FOR: {s_email} ---")
                     
                     emb = model.encode([target_job['skills'], text])
                     score = round(float(cosine_similarity([emb[0]], emb[1:])[0][0])*100, 2)
                     
-                    print(f"✅ Final Match Score: {score}%\n----------------------------------")
+                    print(f"✅ Match Score: {score}%\n----------------------------------")
                     
                     if s_email:
                         is_selected = score > 40
+                        
+                        # Only route to HR and log in admin panel if selected
                         if is_selected:
-                            send_mail(target_job['hr_email'], f"H.I.R.E Auto-Match: {target_job['title']}", f"AI auto-routed a resume from email. Score: {score}%", io.BytesIO(pdf_bytes), part.get_filename())
+                            send_mail(target_job['hr_email'], 
+                                      f"H.I.R.E Auto-Match: {target_job['title']}", 
+                                      f"AI auto-routed a resume from email. Score: {score}%", 
+                                      io.BytesIO(pdf_bytes), part.get_filename())
+                            
                             processed_list.append({
                                 "email": s_email,
                                 "job": target_job['title'],
@@ -173,11 +188,13 @@ def run_imap_core():
                                 "timestamp": datetime.now().strftime("%I:%M %p")
                             })
                             
+                        # Send status update to candidate regardless
                         cand_subj = f"Application Update: {target_job['title']}"
                         cand_body = ai_agent.process_candidate(target_job['title'], target_job['skills'], text, score, is_selected)
                         threading.Thread(target=send_mail, args=(s_email, cand_subj, cand_body)).start()
 
-        mail.close(); mail.logout()
+        mail.close()
+        mail.logout()
         
         if processed_list:
             try:
@@ -202,9 +219,8 @@ def auto_imap_worker():
                 print(f"📥 BACKGROUND ENGINE: Successfully processed {len(processed)} new resumes!")
         except Exception as e: 
             print(f"⚠️ BACKGROUND ENGINE ERROR: {e}")
-        time.sleep(10) # Checks exactly every 10 seconds
+        time.sleep(10)
 
-# Boot the thread immediately
 threading.Thread(target=auto_imap_worker, daemon=True).start()
 
 @app.route('/sync_inbox')
@@ -291,7 +307,6 @@ def get_my_jobs():
 @app.route('/get_public_jobs')
 def get_public_jobs():
     conn = get_db()
-    # 🚀 We fetch the ID so the Seeker UI can show "JOB-X"
     j = conn.execute('SELECT id, title, skills, company FROM jobs WHERE hr_email IN (SELECT email FROM users WHERE role = "HR")').fetchall()
     conn.close()
     return jsonify([dict(row) for row in j])
