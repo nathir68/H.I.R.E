@@ -390,5 +390,96 @@
         "role": "ADMIN",
         "action": "Login Successful",
         "details": ""
+    },
+    {
+        "timestamp": "2026-03-04 14:01:42",
+        "email": "nathirvkp@gmail.com",
+        "role": "ADMIN",
+        "action": "Login Successful",
+        "details": ""
+    },
+    {
+        "timestamp": "2026-03-04 14:03:57",
+        "email": "sahana080108@gmail.com",
+        "role": "Seeker",
+        "action": "Login Successful",
+        "details": ""
+    },
+    {
+        "timestamp": "2026-03-04 14:04:30",
+        "email": "sahana080108@gmail.com",
+        "role": "Seeker",
+        "action": "Logout",
+        "details": ""
+    },
+    {
+        "timestamp": "2026-03-04 14:04:44",
+        "email": "nathirvkp@gmail.com",
+        "role": "ADMIN",
+        "action": "Login Successful",
+        "details": ""
+    },
+    {
+        "timestamp": "2026-03-04 14:30:34",
+        "email": "nathirvkp@gmail.com",
+        "role": "ADMIN",
+        "action": "Login Successful",
+        "details": ""
+    },
+    {
+        "timestamp": "2026-03-04 14:34:53",
+        "email": "nathirvkp@gmail.com",
+        "role": "ADMIN",
+        "action": "Logout",
+        "details": ""
+    },
+    {
+        "timestamp": "2026-03-04 14:36:04",
+        "email": "nathirvkp@gmail.com",
+        "role": "ADMIN",
+        "action": "Login Successful",
+        "details": ""
+    },
+    {
+        "timestamp": "2026-03-04 14:36:11",
+        "email": "nathirvkp@gmail.com",
+        "role": "ADMIN",
+        "action": "Logout",
+        "details": ""
+    },
+    {
+        "timestamp": "2026-03-04 14:36:27",
+        "email": "sahana080108@gmail.com",
+        "role": "Seeker",
+        "action": "Login Successful",
+        "details": ""
+    },
+    {
+        "timestamp": "2026-03-05 16:21:15",
+        "email": "nathirvkp@gmail.com",
+        "role": "ADMIN",
+        "action": "Login Successful",
+        "details": ""
+    },
+    {
+        "timestamp": "2026-03-05 16:23:03",
+        "email": "nathirvkp@gmail.com",
+        "role": "ADMIN",
+        "action": "Logout",
+        "details": ""
+    },
+    {
+        "timestamp": "2026-03-05 16:23:28",
+        "email": "nandhiniraja2408@gmail.com",
+        "role": "HR",
+        "action": "Login Successful",
+        "details": ""
+    },
+    {
+        "timestamp": "2026-03-05 16:24:02",
+        "email": "nandhiniraja2408@gmail.com",
+        "role": "HR",
+        "action": "Logout",
+        "details": ""
     }
 ]

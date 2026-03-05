@@ -13,7 +13,7 @@ import google.generativeai as genai
 app = Flask(__name__)
 app.secret_key = "hire_master_key_2026"
 
-# --- 🤖 AGENTIC AI WORKFLOW SETUP (CLOUD API) ---
+# --- 🤖 AGENTIC AI WORKFLOW SETUP ---
 GENAI_API_KEY = "AIzaSyD-2R1p1nVZttghf-eWg-nQY5ehTHUVsUE"
 genai.configure(api_key=GENAI_API_KEY)
 
@@ -115,16 +115,18 @@ def send_mail_async(to_email, subject, body, attachment_data, filename):
     attachment_stream = io.BytesIO(attachment_data)
     send_mail(to_email, subject, body, attachment_stream, filename)
 
-# --- 🚀 ADVANCED IMAP AUTOMATION CORE ---
+# --- 🚀 ADVANCED BULLETPROOF IMAP AUTOMATION CORE ---
 def run_imap_core():
-    """Checks emails, processes resumes, and routes ONLY if score > 40%"""
+    mail = None
     try:
         mail = imaplib.IMAP4_SSL('imap.gmail.com')
         mail.login(SENDER_EMAIL, SENDER_PASSWORD)
         mail.select('inbox')
         
         status, messages = mail.search(None, '(UNSEEN)')
-        if not messages[0]: 
+        # 🐛 FIX: Always properly logout even if inbox is empty to prevent Gmail blocks!
+        if not messages or not messages[0]: 
+            mail.logout()
             return []
         
         processed_list = []
@@ -132,68 +134,86 @@ def run_imap_core():
         jobs = {str(j['id']): dict(j) for j in conn.execute('SELECT * FROM jobs').fetchall()}
         conn.close()
 
-        for num in messages[0].split():
-            _, data = mail.fetch(num, '(RFC822)')
-            msg = email.message_from_bytes(data[0][1])
-            
-            subj_data, encoding = decode_header(msg['Subject'])[0]
-            if isinstance(subj_data, bytes):
-                subj = subj_data.decode(encoding if encoding else 'utf-8', errors='ignore')
-            else:
-                subj = str(subj_data)
-            
-            match = re.search(r'JOB\s*-\s*(\d+)', subj.upper())
-            if not match: 
-                continue
-            job_id = match.group(1)
-            
-            if job_id not in jobs: 
-                continue
-            
-            target_job = jobs[job_id]
-            
-            for part in msg.walk():
-                if part.get_filename() and part.get_filename().endswith('.pdf'):
-                    pdf_bytes = part.get_payload(decode=True)
-                    text, s_email = extract_clean_text(io.BytesIO(pdf_bytes))
-                    
-                    if not text: 
-                        continue
+        email_ids = messages[0].split()
+        print(f"\n📥 FOUND {len(email_ids)} UNREAD EMAILS. Processing...")
+
+        for num in email_ids:
+            try: # 🐛 FIX: Inner Try-Catch! If one email is bad, it skips safely to the next one!
+                _, data = mail.fetch(num, '(RFC822)')
+                msg = email.message_from_bytes(data[0][1])
+                
+                subj_data, encoding = decode_header(msg['Subject'])[0]
+                if isinstance(subj_data, bytes):
+                    subj = subj_data.decode(encoding if encoding else 'utf-8', errors='ignore')
+                else:
+                    subj = str(subj_data)
+                
+                match = re.search(r'JOB\s*-\s*(\d+)', subj.upper())
+                if not match: 
+                    print(f"⚠️ Skipped '{subj}': Did not contain 'JOB-X' format.")
+                    continue
+                job_id = match.group(1)
+                
+                if job_id not in jobs: 
+                    print(f"⚠️ Skipped '{subj}': Job ID {job_id} does not exist in portal.")
+                    continue
+                
+                target_job = jobs[job_id]
+                has_pdf = False
+                
+                for part in msg.walk():
+                    if part.get_filename() and part.get_filename().endswith('.pdf'):
+                        has_pdf = True
+                        pdf_bytes = part.get_payload(decode=True)
+                        text, s_email = extract_clean_text(io.BytesIO(pdf_bytes))
                         
-                    is_fake, _ = detect_fake_resume(text)
-                    if is_fake: 
-                        continue 
-                    
-                    print(f"\n--- 🧠 ZERO-TOUCH AI VERIFICATION FOR: {s_email} ---")
-                    
-                    emb = model.encode([target_job['skills'], text])
-                    score = round(float(cosine_similarity([emb[0]], emb[1:])[0][0])*100, 2)
-                    
-                    print(f"✅ Match Score: {score}%\n----------------------------------")
-                    
-                    if s_email:
-                        is_selected = score > 40
-                        
-                        # Only route to HR and log in admin panel if selected
-                        if is_selected:
-                            send_mail(target_job['hr_email'], 
-                                      f"H.I.R.E Auto-Match: {target_job['title']}", 
-                                      f"AI auto-routed a resume from email. Score: {score}%", 
-                                      io.BytesIO(pdf_bytes), part.get_filename())
+                        if not text: 
+                            print(f"⚠️ Skipped '{subj}': PDF was empty or unreadable.")
+                            continue
                             
+                        is_fake, reason = detect_fake_resume(text)
+                        if is_fake: 
+                            print(f"⚠️ Skipped '{subj}': Resume flagged as fake ({reason}).")
+                            continue 
+                        
+                        print(f"--- 🧠 ZERO-TOUCH VERIFICATION FOR: {s_email} ---")
+                        
+                        emb = model.encode([target_job['skills'], text])
+                        score = round(float(cosine_similarity([emb[0]], emb[1:])[0][0])*100, 2)
+                        
+                        print(f"✅ Match Score: {score}%\n")
+                        
+                        if s_email:
+                            is_selected = score > 40
+                            status_label = "Shortlisted ✅" if is_selected else "Rejected ❌"
+                            
+                            if is_selected:
+                                send_mail(target_job['hr_email'], 
+                                          f"H.I.R.E Auto-Match: {target_job['title']}", 
+                                          f"AI auto-routed a resume from email. Score: {score}%", 
+                                          io.BytesIO(pdf_bytes), part.get_filename())
+                                
                             processed_list.append({
                                 "email": s_email,
                                 "job": target_job['title'],
-                                "score": f"{score}%",
+                                "score": f"{score}% ({status_label})",
                                 "timestamp": datetime.now().strftime("%I:%M %p")
                             })
-                            
-                        # Send status update to candidate regardless
-                        cand_subj = f"Application Update: {target_job['title']}"
-                        cand_body = ai_agent.process_candidate(target_job['title'], target_job['skills'], text, score, is_selected)
-                        threading.Thread(target=send_mail, args=(s_email, cand_subj, cand_body)).start()
+                                
+                            cand_subj = f"Application Update: {target_job['title']}"
+                            cand_body = ai_agent.process_candidate(target_job['title'], target_job['skills'], text, score, is_selected)
+                            threading.Thread(target=send_mail, args=(s_email, cand_subj, cand_body)).start()
+                
+                if not has_pdf:
+                    print(f"⚠️ Skipped '{subj}': No PDF attachment found.")
 
-        mail.close()
+            except Exception as e:
+                print(f"❌ Error on an individual email (Skipping to next): {e}")
+                continue # Safely move to the next email!
+
+        # 🐛 FIX: Always securely close connection
+        try: mail.close()
+        except: pass
         mail.logout()
         
         if processed_list:
@@ -202,24 +222,25 @@ def run_imap_core():
             except: history = []
             history.extend(processed_list)
             with open(IMAP_LOG_FILE, 'w', encoding='utf-8') as f: json.dump(history, f, indent=4)
-            log_activity(SENDER_EMAIL, "ADMIN", "Zero-Touch Sync", f"Routed {len(processed_list)} resumes automatically")
+            log_activity(SENDER_EMAIL, "ADMIN", "Zero-Touch Sync", f"Processed {len(processed_list)} resumes")
         
         return processed_list
     except Exception as e:
-        print(f"IMAP Error: {e}")
+        print(f"IMAP Connection Issue: {e}")
+        try:
+            if mail: mail.logout()
+        except: pass
         return []
 
 # --- 🤖 THE NEVER-SLEEPING BACKGROUND THREAD ---
 def auto_imap_worker():
-    print("🚀 BACKGROUND ENGINE: Zero-Touch IMAP Automation Started! (Checking every 10s)")
+    print("🚀 BACKGROUND ENGINE: Zero-Touch Automation Started! (Checking every 15s)")
     while True:
         try: 
-            processed = run_imap_core()
-            if processed:
-                print(f"📥 BACKGROUND ENGINE: Successfully processed {len(processed)} new resumes!")
+            run_imap_core()
         except Exception as e: 
-            print(f"⚠️ BACKGROUND ENGINE ERROR: {e}")
-        time.sleep(10)
+            pass 
+        time.sleep(15)
 
 threading.Thread(target=auto_imap_worker, daemon=True).start()
 
